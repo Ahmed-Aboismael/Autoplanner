@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Create Planner Task</title>
+
+    <!-- Office JavaScript API -->
+    <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+
+    <!-- Our Custom CSS -->
+    <link rel="stylesheet" type="text/css" href="taskpane.css" />
+</head>
+<body>
+    <div class="container">
+        <h1 class="ms-font-xl">Create Planner Task</h1>
+
+        <div id="loadingIndicator" style="display: none;">
+            <p>Loading...</p> <!-- You can replace this with a spinner later -->
+        </div>
+
+        <div id="content">
+            <div class="form-group">
+                <label for="taskTitle" class="ms-font-m-plus">Task Title (from Email Subject):</label>
+                <input type="text" id="taskTitle" class="ms-TextField-field" />
+            </div>
+
+            <div class="form-group">
+                <label for="planSelector" class="ms-font-m-plus">Select Planner Plan:</label>
+                <select id="planSelector" class="ms-Dropdown-select">
+                    <option value="">Loading plans...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="assigneeSelector" class="ms-font-m-plus">Assign to:</label>
+                <select id="assigneeSelector" class="ms-Dropdown-select">
+                    <option value="">Select a plan first...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="dueDate" class="ms-font-m-plus">Due Date:</label>
+                <input type="date" id="dueDate" class="ms-TextField-field" />
+            </div>
+
+            <div class="form-group">
+                <label for="taskDescription" class="ms-font-m-plus">Description (from Email Body):</label>
+                <textarea id="taskDescription" rows="6" class="ms-TextField-field"></textarea>
+            </div>
+
+            <button id="createTaskButton" class="ms-Button ms-Button--primary">
+                <span class="ms-Button-label">Create Task</span>
+            </button>
+
+            <div id="statusMessage" class="ms-font-m" style="margin-top: 15px;"></div>
+        </div>
+    </div>
+
+    <!-- Our Custom JavaScript -->
+    <script type="text/javascript" src="taskpane.js"></script>
+</body>
+</html>

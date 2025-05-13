@@ -1,0 +1,119 @@
+{
+	"id": "d3a46ad2-ce13-403f-b807-808478e0c2c8",
+	"acceptMappedClaims": null,
+	"accessTokenAcceptedVersion": null,
+	"addIns": [],
+	"allowPublicClient": null,
+	"appId": "60ca32af-6d83-4369-8a0a-dce7bb909d9d",
+	"appRoles": [],
+	"oauth2AllowUrlPathMatching": false,
+	"createdDateTime": "2025-05-13T12:52:29Z",
+	"description": null,
+	"certification": null,
+	"disabledByMicrosoftStatus": null,
+	"groupMembershipClaims": null,
+	"identifierUris": [
+		"api://60ca32af-6d83-4369-8a0a-dce7bb909d9d"
+	],
+	"informationalUrls": {
+		"termsOfService": null,
+		"support": null,
+		"privacy": null,
+		"marketing": null
+	},
+	"keyCredentials": [],
+	"knownClientApplications": [],
+	"logoUrl": null,
+	"logoutUrl": null,
+	"name": "Auto Planner",
+	"notes": null,
+	"oauth2AllowIdTokenImplicitFlow": false,
+	"oauth2AllowImplicitFlow": false,
+	"oauth2Permissions": [
+		{
+			"adminConsentDescription": "Allows the add-in to call its own web API as the signed-in user.",
+			"adminConsentDisplayName": "Access OutlookPlannerAddin as the user",
+			"id": "eefc0dda-b78a-41dc-bd97-9749dcab2129",
+			"isEnabled": true,
+			"lang": null,
+			"origin": "Application",
+			"type": "User",
+			"userConsentDescription": "Allows the add-in to call its own web API as you.",
+			"userConsentDisplayName": "Access OutlookPlannerAddin as you",
+			"value": "access_as_user"
+		}
+	],
+	"oauth2RequirePostResponse": false,
+	"optionalClaims": null,
+	"orgRestrictions": [],
+	"parentalControlSettings": {
+		"countriesBlockedForMinors": [],
+		"legalAgeGroupRule": "Allow"
+	},
+	"passwordCredentials": [],
+	"preAuthorizedApplications": [
+		{
+			"appId": "d3590ed6-52b3-4102-aeff-aad2292ab01c",
+			"permissionIds": [
+				"eefc0dda-b78a-41dc-bd97-9749dcab2129"
+			]
+		},
+		{
+			"appId": "bc59ab01-8403-45c6-8796-ac3ef710b3e3",
+			"permissionIds": [
+				"eefc0dda-b78a-41dc-bd97-9749dcab2129"
+			]
+		}
+	],
+	"publisherDomain": "drahmedmohamedoutlook.onmicrosoft.com",
+	"replyUrlsWithType": [
+		{
+			"url": "https://localhost:3000/taskpane.html",
+			"type": "Spa"
+		}
+	],
+	"requiredResourceAccess": [
+		{
+			"resourceAppId": "00000003-0000-0000-c000-000000000000",
+			"resourceAccess": [
+				{
+					"id": "863451e7-0667-486c-a5d6-d135439485f0",
+					"type": "Scope"
+				},
+				{
+					"id": "5f8c59db-677d-491f-a6b8-5f174b11ec1d",
+					"type": "Scope"
+				},
+				{
+					"id": "570282fd-fa5c-430d-a7fd-fc8dc98a9dca",
+					"type": "Scope"
+				},
+				{
+					"id": "7427e0e9-2fba-42fe-b0c0-848c9e6a8182",
+					"type": "Scope"
+				},
+				{
+					"id": "37f7f235-527c-4136-accd-4a02d197296e",
+					"type": "Scope"
+				},
+				{
+					"id": "14dad69e-099b-42c9-810b-d002981feec1",
+					"type": "Scope"
+				},
+				{
+					"id": "2219042f-cab5-40cc-b0d2-16b1540b4c5f",
+					"type": "Scope"
+				},
+				{
+					"id": "e1fe6dd8-ba31-4d61-89e7-88639da4683d",
+					"type": "Scope"
+				}
+			]
+		}
+	],
+	"samlMetadataUrl": null,
+	"signInUrl": null,
+	"signInAudience": "AzureADMyOrg",
+	"tags": [],
+	"tokenEncryptionKeyId": null
+}
