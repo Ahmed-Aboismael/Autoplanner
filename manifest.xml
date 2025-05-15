@@ -6,11 +6,11 @@
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="OutlookPlannerAddin"/>
   <Description DefaultValue="A template to get started."/>
-  <IconUrl DefaultValue="https://localhost:3000/assets/icon-64.png"/>
-  <HighResolutionIconUrl DefaultValue="https://localhost:3000/assets/icon-128.png"/>
-  <SupportUrl DefaultValue="https://www.contoso.com/help"/>
+  <IconUrl DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/assets/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/assets/icon-128.png"/>
+  <SupportUrl DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/"/>
   <AppDomains>
-    <AppDomain>https://www.contoso.com</AppDomain>
+    <AppDomain>https://Ahmed-Aboismael.github.io</AppDomain>
   </AppDomains>
   <Hosts>
     <Host Name="Mailbox"/>
@@ -23,7 +23,7 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://localhost:3000/taskpane.html"/>
+        <SourceLocation DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/taskpane.html"/>
         <RequestedHeight>250</RequestedHeight>
       </DesktopSettings>
     </Form>
@@ -85,13 +85,13 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://localhost:3000/assets/icon-16.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://localhost:3000/assets/icon-32.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://localhost:3000/assets/icon-80.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/assets/icon-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/assets/icon-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/assets/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="Commands.Url" DefaultValue="https://localhost:3000/commands.html"/>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3000/taskpane.html"/>
+        <bt:Url id="Commands.Url" DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/commands.html"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GroupLabel" DefaultValue="Contoso Add-in"/>
@@ -105,18 +105,18 @@
     </Resources>
     <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
       <WebApplicationInfo>
-        <Id>60ca32af-6d83-4369-8a0a-dce7bb909d9d</Id>
-        <Resource>api://60ca32af-6d83-4369-8a0a-dce7bb909d9d</Resource>
-        <Scopes>
-          <Scope>openid</Scope>
-          <Scope>profile</Scope>
-          <Scope>offline_access</Scope>
-          <Scope>User.Read</Scope>
-          <Scope>Mail.Read</Scope>
-          <Scope>Tasks.ReadWrite</Scope>
-          <Scope>Group.Read.All</Scope>
-          <Scope>Files.ReadWrite.All</Scope>
-        </Scopes>
+      <Id>60ca32af-6d83-4369-8a0a-dce7bb909d9d</Id>
+      <Resource>api://Ahmed-Aboismael.github.io/Autoplanner/60ca32af-6d83-4369-8a0a-dce7bb909d9d</Resource> 
+      <Scopes>
+        <Scope>openid</Scope>
+        <Scope>profile</Scope>
+        <Scope>offline_access</Scope> 
+        <Scope>User.Read</Scope>
+        <Scope>Mail.Read</Scope>
+        <Scope>Tasks.ReadWrite</Scope>
+        <Scope>Group.Read.All</Scope>
+        <Scope>Files.ReadWrite.All</Scope>
+      </Scopes>
       </WebApplicationInfo>
     </VersionOverrides>
   </VersionOverrides>
