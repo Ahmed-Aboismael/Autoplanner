@@ -6,11 +6,11 @@
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="OutlookPlannerAddin"/>
   <Description DefaultValue="A template to get started."/>
-  <IconUrl DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/assets/icon-64.png"/>
-  <HighResolutionIconUrl DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/assets/icon-128.png"/>
-  <SupportUrl DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/"/>
+  <IconUrl DefaultValue="https://ahmed-aboismael.github.io/assets/icon-64.png"/>
+  <HighResolutionIconUrl DefaultValue="https://ahmed-aboismael.github.io/assets/icon-128.png"/>
+  <SupportUrl DefaultValue="https://www.contoso.com/help"/>
   <AppDomains>
-    <AppDomain>https://Ahmed-Aboismael.github.io</AppDomain>
+    <AppDomain>https://ahmed-aboismael.github.io</AppDomain>
   </AppDomains>
   <Hosts>
     <Host Name="Mailbox"/>
@@ -23,7 +23,7 @@
   <FormSettings>
     <Form xsi:type="ItemRead">
       <DesktopSettings>
-        <SourceLocation DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/taskpane.html"/>
+        <SourceLocation DefaultValue="https://ahmed-aboismael.github.io/taskpane.html"/>
         <RequestedHeight>250</RequestedHeight>
       </DesktopSettings>
     </Form>
@@ -42,7 +42,6 @@
     <Hosts>
       <Host xsi:type="MailHost">
         <DesktopFormFactor>
-          <FunctionFile resid="Commands.Url"/>
           <ExtensionPoint xsi:type="MessageReadCommandSurface">
             <OfficeTab id="TabDefault">
               <Group id="msgReadGroup">
@@ -62,7 +61,6 @@
                     <SourceLocation resid="Taskpane.Url"/>
                   </Action>
                 </Control>
-          
               </Group>
             </OfficeTab>
           </ExtensionPoint>
@@ -71,38 +69,36 @@
     </Hosts>
     <Resources>
       <bt:Images>
-        <bt:Image id="Icon.16x16" DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/assets/icon-16.png"/>
-        <bt:Image id="Icon.32x32" DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/assets/icon-32.png"/>
-        <bt:Image id="Icon.80x80" DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/assets/icon-80.png"/>
+        <bt:Image id="Icon.16x16" DefaultValue="https://ahmed-aboismael.github.io/assets/icon-16.png"/>
+        <bt:Image id="Icon.32x32" DefaultValue="https://ahmed-aboismael.github.io/assets/icon-32.png"/>
+        <bt:Image id="Icon.80x80" DefaultValue="https://ahmed-aboismael.github.io/assets/icon-80.png"/>
       </bt:Images>
       <bt:Urls>
-        <bt:Url id="Commands.Url" DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/src/commands/commands.html"/>
-        <bt:Url id="Taskpane.Url" DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/taskpane.html"/>
+        <bt:Url id="Taskpane.Url" DefaultValue="https://ahmed-aboismael.github.io/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
         <bt:String id="GroupLabel" DefaultValue="Contoso Add-in"/>
         <bt:String id="TaskpaneButton.Label" DefaultValue="Show Task Pane"/>
-        
       </bt:ShortStrings>
       <bt:LongStrings>
         <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Opens a pane displaying all available properties."/>
-        
+
       </bt:LongStrings>
     </Resources>
     <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
       <WebApplicationInfo>
-      <Id>60ca32af-6d83-4369-8a0a-dce7bb909d9d</Id>
-      <Resource>api://Ahmed-Aboismael.github.io/Autoplanner/60ca32af-6d83-4369-8a0a-dce7bb909d9d</Resource> 
-      <Scopes>
-        <Scope>openid</Scope>
-        <Scope>profile</Scope>
-        <Scope>offline_access</Scope> 
-        <Scope>User.Read</Scope>
-        <Scope>Mail.Read</Scope>
-        <Scope>Tasks.ReadWrite</Scope>
-        <Scope>Group.Read.All</Scope>
-        <Scope>Files.ReadWrite.All</Scope>
-      </Scopes>
+        <Id>60ca32af-6d83-4369-8a0a-dce7bb909d9d</Id>
+        <Resource>api://60ca32af-6d83-4369-8a0a-dce7bb909d9d</Resource>
+        <Scopes>
+          <Scope>openid</Scope>
+          <Scope>profile</Scope>
+          <Scope>offline_access</Scope>
+          <Scope>User.Read</Scope>
+          <Scope>Mail.Read</Scope>
+          <Scope>Tasks.ReadWrite</Scope>
+          <Scope>Group.Read.All</Scope>
+          <Scope>Files.ReadWrite.All</Scope>
+        </Scopes>
       </WebApplicationInfo>
     </VersionOverrides>
   </VersionOverrides>
