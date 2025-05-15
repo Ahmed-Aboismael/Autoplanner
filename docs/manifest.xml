@@ -10,7 +10,7 @@
   <HighResolutionIconUrl DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/assets/icon-128.png"/>
   <SupportUrl DefaultValue="https://Ahmed-Aboismael.github.io/Autoplanner/"/>
   <AppDomains>
-    <AppDomain>https://Ahmed-Aboismael.github.io/Autoplanner/</AppDomain>
+    <AppDomain>https://Ahmed-Aboismael.github.io</AppDomain>
   </AppDomains>
   <Hosts>
     <Host Name="Mailbox"/>
@@ -105,18 +105,18 @@
     </Resources>
     <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
       <WebApplicationInfo>
-        <Id>60ca32af-6d83-4369-8a0a-dce7bb909d9d</Id>
-        <Resource>api://60ca32af-6d83-4369-8a0a-dce7bb909d9d</Resource>
-        <Scopes>
-          <Scope>openid</Scope>
-          <Scope>profile</Scope>
-          <Scope>offline_access</Scope>
-          <Scope>User.Read</Scope>
-          <Scope>Mail.Read</Scope>
-          <Scope>Tasks.ReadWrite</Scope>
-          <Scope>Group.Read.All</Scope>
-          <Scope>Files.ReadWrite.All</Scope>
-        </Scopes>
+      <Id>60ca32af-6d83-4369-8a0a-dce7bb909d9d</Id>
+      <Resource>api://Ahmed-Aboismael.github.io/Autoplanner/60ca32af-6d83-4369-8a0a-dce7bb909d9d</Resource> 
+      <Scopes>
+        <Scope>openid</Scope>
+        <Scope>profile</Scope>
+        <Scope>offline_access</Scope> 
+        <Scope>User.Read</Scope>
+        <Scope>Mail.Read</Scope>
+        <Scope>Tasks.ReadWrite</Scope>
+        <Scope>Group.Read.All</Scope>
+        <Scope>Files.ReadWrite.All</Scope>
+      </Scopes>
       </WebApplicationInfo>
     </VersionOverrides>
   </VersionOverrides>
