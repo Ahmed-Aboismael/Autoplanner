@@ -60,8 +60,8 @@
                   </Icon>
                   <Action xsi:type="ShowTaskpane">
                     <SourceLocation resid="Taskpane.Url"/>
-                    <SupportsPinning>true</SupportsPinning>
                   </Action>
+                  <SupportsPinning>true</SupportsPinning>
                 </Control>
               </Group>
             </OfficeTab>
