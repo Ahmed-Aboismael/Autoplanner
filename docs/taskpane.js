@@ -1,5 +1,5 @@
-// Simplified taskpane.js with minimal functionality
-// This version focuses on proper Office.js initialization and basic email data loading
+// Corrected taskpane.js with proper email property access
+// This version uses the correct API pattern for accessing email data in Outlook
 
 // Use Office.initialize instead of Office.onReady to ensure proper loading sequence
 Office.initialize = function (reason) {
@@ -16,41 +16,55 @@ Office.initialize = function (reason) {
             statusElement.textContent = "Add-in initialized successfully";
         }
         
-        // Load email data (subject and body)
+        // Load email data (subject and body) using the correct API pattern
         try {
             console.log("[DEBUG] Getting email subject");
-            Office.context.mailbox.item.subject.getAsync(function(result) {
-                console.log("[DEBUG] Subject result:", result);
-                if (result.status === Office.AsyncResultStatus.Succeeded) {
-                    const titleInput = document.getElementById('taskTitle');
-                    if (titleInput) {
-                        titleInput.value = result.value;
-                        console.log("[DEBUG] Email subject loaded:", result.value);
-                    } else {
-                        console.error("taskTitle element not found");
-                    }
-                } else {
-                    console.error("Error getting email subject:", result.error);
-                }
-            });
             
-            console.log("[DEBUG] Getting email body");
-            Office.context.mailbox.item.body.getAsync(Office.CoercionType.Text, function(result) {
-                console.log("[DEBUG] Body result:", result);
-                if (result.status === Office.AsyncResultStatus.Succeeded) {
-                    const descriptionTextarea = document.getElementById('taskDescription');
-                    if (descriptionTextarea) {
-                        descriptionTextarea.value = result.value;
-                        console.log("[DEBUG] Email body loaded, length:", result.value.length);
-                    } else {
-                        console.error("taskDescription element not found");
-                    }
+            // Check if we're in a valid Outlook context
+            if (Office.context && Office.context.mailbox && Office.context.mailbox.item) {
+                // Direct property access for subject
+                const emailSubject = Office.context.mailbox.item.subject;
+                console.log("[DEBUG] Email subject:", emailSubject);
+                
+                const titleInput = document.getElementById('taskTitle');
+                if (titleInput) {
+                    titleInput.value = emailSubject || "";
+                    console.log("[DEBUG] Email subject loaded");
                 } else {
-                    console.error("Error getting email body:", result.error);
+                    console.error("taskTitle element not found");
                 }
-            });
+                
+                // For body, we need to use getBodyAsync
+                Office.context.mailbox.item.body.getAsync("text", function(asyncResult) {
+                    console.log("[DEBUG] Email body result:", asyncResult);
+                    
+                    if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+                        const emailBody = asyncResult.value;
+                        const descriptionTextarea = document.getElementById('taskDescription');
+                        
+                        if (descriptionTextarea) {
+                            descriptionTextarea.value = emailBody || "";
+                            console.log("[DEBUG] Email body loaded, length:", emailBody.length);
+                        } else {
+                            console.error("taskDescription element not found");
+                        }
+                    } else {
+                        console.error("Error getting email body:", asyncResult.error);
+                    }
+                });
+            } else {
+                console.error("Not in a valid Outlook mail item context");
+                if (statusElement) {
+                    statusElement.textContent = "Error: Not in a valid email context";
+                    statusElement.style.color = "red";
+                }
+            }
         } catch (error) {
             console.error("Error accessing email data:", error);
+            if (statusElement) {
+                statusElement.textContent = "Error accessing email data: " + error.message;
+                statusElement.style.color = "red";
+            }
         }
         
         // Set up create task button with minimal functionality
