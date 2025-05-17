@@ -10,7 +10,7 @@
   <ProviderName>Contoso</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="OutlookPlannerAddin"/>
-  <Description DefaultValue="A template to get started."/>
+  <Description DefaultValue="Create tasks in Microsoft Planner from emails"/>
   <IconUrl DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/assets/icon-64.png"/>
   <HighResolutionIconUrl DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/assets/icon-128.png"/>
   <SupportUrl DefaultValue="https://www.contoso.com/help"/>
@@ -38,10 +38,12 @@
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
   </Rule>
   <DisableEntityHighlighting>false</DisableEntityHighlighting>
+  
+  <!-- First VersionOverrides for v1.0 -->
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
     <Requirements>
-      <bt:Sets DefaultMinVersion="1.3">
-        <bt:Set Name="Mailbox"/>
+      <bt:Sets>
+        <bt:Set Name="Mailbox" MinVersion="1.3"/>
       </bt:Sets>
     </Requirements>
     <Hosts>
@@ -70,6 +72,8 @@
             </OfficeTab>
           </ExtensionPoint>
         </DesktopFormFactor>
+        
+        <!-- Add WebFormFactor for Outlook on the web -->
         <WebFormFactor>
           <ExtensionPoint xsi:type="MessageReadCommandSurface">
             <OfficeTab id="TabDefault">
@@ -113,10 +117,12 @@
         <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Create a task in Microsoft Planner from this email"/>
       </bt:LongStrings>
     </Resources>
+    
+    <!-- Second VersionOverrides for v1.1 with WebApplicationInfo -->
     <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
       <Requirements>
-        <bt:Sets DefaultMinVersion="1.3">
-          <bt:Set Name="Mailbox"/>
+        <bt:Sets>
+          <bt:Set Name="Mailbox" MinVersion="1.3"/>
         </bt:Sets>
       </Requirements>
       <Hosts>
@@ -188,8 +194,6 @@
           <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Create a task in Microsoft Planner from this email"/>
         </bt:LongStrings>
       </Resources>
-      <!--  Nested VersionOverridesV1_1 for WebApplicationInfo  -->
-        <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
       <WebApplicationInfo>
         <Id>60ca32af-6d83-4369-8a0a-dce7bb909d9d</Id>
         <Resource>api://Ahmed-Aboismael.github.io/Autoplanner/60ca32af-6d83-4369-8a0a-dce7bb909d9d</Resource>
