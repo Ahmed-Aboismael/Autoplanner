@@ -6,11 +6,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Create Task</title>
 
-    <!-- Office JavaScript API -->
+    <!-- Office JavaScript API - MUST BE FIRST -->
     <script type="text/javascript" src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
 
-    <!-- Add jQuery BEFORE your custom JavaScript -->
+    <!-- jQuery - Include ONLY ONCE -->
     <script type="text/javascript" src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- MSAL Authentication Library -->
+    <script src="https://alcdn.msauth.net/lib/1.4.4/js/msal.min.js"></script>
     
     <!-- Our Custom CSS -->
     <link rel="stylesheet" type="text/css" href="taskpane.css" />
@@ -58,15 +61,10 @@
             </button>
 
             <div id="statusMessage" class="ms-font-m" style="margin-top: 15px;"></div>
-            <div id="status" style="margin-bottom: 10 px; color: #666;"></div>
-            
         </div>
     </div>
 
-    <!-- Our Custom JavaScript -->
-    <script src="https://alcdn.msauth.net/lib/1.4.4/js/msal.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Our Custom JavaScript - MUST BE LAST -->
     <script type="text/javascript" src="taskpane.js"></script>
-
 </body>
 </html>
