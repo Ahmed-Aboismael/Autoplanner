@@ -1,5 +1,5 @@
-// Reset taskpane.js with forced token clearing and minimal permissions
-// This version implements a fresh authentication flow to eliminate admin approval
+// Redirect-based taskpane.js with forced token clearing
+// This version uses redirect authentication instead of popup for better Outlook desktop compatibility
 
 // Use Office.initialize instead of Office.onReady to ensure proper loading sequence
 Office.initialize = function (reason) {
@@ -17,7 +17,7 @@ Office.initialize = function (reason) {
         const currentUrl = window.location.href.split('?')[0]; // Remove any query parameters
         console.log("[DEBUG] Using current URL as redirect URI:", currentUrl);
         
-        // MSAL configuration with minimal permissions and improved settings
+        // MSAL configuration with redirect authentication
         const msalConfig = {
             auth: {
                 clientId: '60ca32af-6d83-4369-8a0a-dce7bb909d9d',
@@ -42,6 +42,16 @@ Office.initialize = function (reason) {
             }
         };
 
+        // Configure the request with MINIMAL permission scopes
+        // Only request what's absolutely necessary for basic functionality
+        const requestObj = {
+            scopes: [
+                'User.Read',       // Basic profile
+                'Tasks.ReadWrite', // Tasks access
+                'Mail.Read'        // Email access
+            ]
+        };
+
         // Create the MSAL application object
         let msalInstance;
         try {
@@ -49,22 +59,14 @@ Office.initialize = function (reason) {
             console.log("[DEBUG] MSAL initialized successfully");
             updateStatus("MSAL initialized successfully");
             
-            // Force logout to clear any existing tokens
-            if (msalInstance.getAccount()) {
-                console.log("[DEBUG] Existing account found, forcing logout");
-                msalInstance.logout();
-                // Reload the page after logout to ensure clean state
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
-                return;
-            }
-            
             // Register redirect callback
             msalInstance.handleRedirectCallback((error, response) => {
                 if (error) {
                     console.error("[DEBUG] Redirect callback error:", error);
                     showError("Authentication error: " + error.message);
+                    
+                    // Show detailed error information
+                    showAuthErrorDetails(error);
                 } else {
                     console.log("[DEBUG] Redirect callback success:", response);
                     updateStatus("Authentication successful");
@@ -75,16 +77,6 @@ Office.initialize = function (reason) {
             console.error("Failed to initialize MSAL:", error);
             showError("Failed to initialize MSAL: " + error.message);
         }
-
-        // Configure the request with MINIMAL permission scopes
-        // Only request what's absolutely necessary for basic functionality
-        const requestObj = {
-            scopes: [
-                'User.Read',       // Basic profile
-                'Tasks.ReadWrite', // Tasks access
-                'Mail.Read'        // Email access
-            ]
-        };
         
         // Set up status message area
         const statusElement = document.getElementById('statusMessage');
@@ -161,8 +153,17 @@ Office.initialize = function (reason) {
             console.error("planSelector not found");
         }
         
-        // Add a sign-in button instead of auto-authenticating
-        addSignInButton();
+        // Check if user is already signed in
+        if (msalInstance && msalInstance.getAccount()) {
+            const account = msalInstance.getAccount();
+            updateStatus('User already signed in as: ' + account.userName + '. Loading plans...');
+            console.log("[DEBUG] User account:", account);
+            loadPlannerPlans();
+        } else {
+            updateStatus('Please sign in to access your Planner plans');
+            // Add a sign-in button instead of auto-authenticating
+            addSignInButton();
+        }
 
         // Function to clear all tokens and cached state
         function clearAllTokens() {
@@ -209,7 +210,7 @@ Office.initialize = function (reason) {
             signInButton.textContent = 'Sign in with Microsoft';
             signInButton.className = 'ms-Button ms-Button--primary';
             signInButton.style.padding = '8px 16px';
-            signInButton.onclick = authenticateWithPopup;
+            signInButton.onclick = authenticateWithRedirect;
             
             signInArea.appendChild(signInButton);
             
@@ -218,7 +219,7 @@ Office.initialize = function (reason) {
             troubleshootingInfo.style.margin = '10px 0';
             troubleshootingInfo.style.fontSize = '12px';
             troubleshootingInfo.style.color = '#666';
-            troubleshootingInfo.innerHTML = 'If you encounter admin approval screens, try:<br>1. Using incognito/private browsing<br>2. Clearing browser cache<br>3. Using a different browser';
+            troubleshootingInfo.innerHTML = 'If you encounter issues:<br>1. Use incognito/private browsing<br>2. Clear browser cache<br>3. Try a different browser';
             
             signInArea.appendChild(troubleshootingInfo);
             
@@ -229,9 +230,9 @@ Office.initialize = function (reason) {
             console.log("[DEBUG] Sign-in button added");
         }
 
-        // Authenticate using popup for Outlook desktop with improved error handling
-        function authenticateWithPopup() {
-            updateStatus('Authenticating...');
+        // Authenticate using redirect for better Outlook desktop compatibility
+        function authenticateWithRedirect() {
+            updateStatus('Authenticating... You will be redirected to Microsoft login.');
             
             if (!msalInstance) {
                 showError('Authentication library not initialized');
@@ -248,68 +249,66 @@ Office.initialize = function (reason) {
                 loginHint: loginHint || ''
             };
             
-            console.log("[DEBUG] Starting popup authentication with params:", authParams);
-            msalInstance.loginPopup(authParams)
-                .then(function(loginResponse) {
-                    updateStatus('Authentication successful. Loading plans...');
-                    console.log("[DEBUG] Login response:", loginResponse);
-                    loadPlannerPlans();
-                })
-                .catch(function(error) {
-                    // Enhanced error handling with specific guidance
-                    if (error.errorCode === "AADSTS700016") {
-                        showError('This application is not available in your organization. Please contact your IT administrator.');
-                        console.error("Application not found in directory:", error);
-                        
-                        // Show additional guidance
-                        const guidanceElement = document.createElement('div');
-                        guidanceElement.innerHTML = `
-                            <div style="margin-top: 20px; padding: 10px; border: 1px solid #e0e0e0; background-color: #f9f9f9;">
-                                <h3>Troubleshooting Guidance</h3>
-                                <p>This error occurs when the application is not registered in your organization's directory.</p>
-                                <p>Options to resolve:</p>
-                                <ul>
-                                    <li>Try signing in with a different account</li>
-                                    <li>Ask your IT administrator to allow external applications</li>
-                                </ul>
-                            </div>
-                        `;
-                        document.body.appendChild(guidanceElement);
-                    } else if (error.errorCode === "AADSTS900971") {
-                        showError('Authentication error: No reply address provided. Please check Azure AD app registration.');
-                        console.error("Redirect URI error. Current URL:", window.location.href);
-                        
-                        // Show redirect URI guidance
-                        const guidanceElement = document.createElement('div');
-                        guidanceElement.innerHTML = `
-                            <div style="margin-top: 20px; padding: 10px; border: 1px solid #e0e0e0; background-color: #f9f9f9;">
-                                <h3>Redirect URI Issue</h3>
-                                <p>The current page URL needs to be registered in Azure AD:</p>
-                                <code>${currentUrl}</code>
-                            </div>
-                        `;
-                        document.body.appendChild(guidanceElement);
-                    } else if (error.errorCode === "AADSTS65001") {
-                        showError('You need to consent to the permissions requested by this application.');
-                        
-                        // Offer retry with explicit consent
-                        const retryButton = document.createElement('button');
-                        retryButton.textContent = 'Retry with explicit consent';
-                        retryButton.className = 'ms-Button ms-Button--primary';
-                        retryButton.style.margin = '20px 0';
-                        retryButton.onclick = function() {
-                            const retryParams = { ...authParams, prompt: 'consent' };
-                            msalInstance.loginPopup(retryParams);
-                        };
-                        document.body.appendChild(retryButton);
-                    } else {
-                        showError('Authentication error: ' + error.message);
-                    }
-                    console.error("Authentication error:", error);
-                });
+            console.log("[DEBUG] Starting redirect authentication with params:", authParams);
+            
+            try {
+                // Use loginRedirect instead of loginPopup
+                msalInstance.loginRedirect(authParams);
+            } catch (error) {
+                console.error("Error starting redirect authentication:", error);
+                showError("Failed to start authentication: " + error.message);
+            }
         }
 
-        // Get access token for Microsoft Graph API with improved token acquisition
+        // Display detailed authentication error information
+        function showAuthErrorDetails(error) {
+            const errorDiv = document.createElement('div');
+            errorDiv.style.margin = '20px 0';
+            errorDiv.style.padding = '10px';
+            errorDiv.style.border = '1px solid #e0e0e0';
+            errorDiv.style.backgroundColor = '#f9f9f9';
+            
+            let errorContent = `
+                <h3>Authentication Error Details</h3>
+                <p><strong>Error Code:</strong> ${error.errorCode || 'Unknown'}</p>
+                <p><strong>Error Message:</strong> ${error.errorMessage || error.message || 'Unknown error'}</p>
+            `;
+            
+            // Add specific guidance based on error code
+            if (error.errorCode === "AADSTS700016") {
+                errorContent += `
+                    <p><strong>Guidance:</strong> This application is not registered in your organization's directory.</p>
+                    <ul>
+                        <li>Try signing in with a different account</li>
+                        <li>Ask your IT administrator to allow external applications</li>
+                    </ul>
+                `;
+            } else if (error.errorCode === "AADSTS900971") {
+                errorContent += `
+                    <p><strong>Guidance:</strong> No reply address (redirect URI) is configured.</p>
+                    <p>The current page URL needs to be registered in Azure AD: <code>${currentUrl}</code></p>
+                `;
+            } else if (error.errorCode === "AADSTS65001") {
+                errorContent += `
+                    <p><strong>Guidance:</strong> You need to consent to the permissions requested by this application.</p>
+                    <button id="retryConsentBtn" class="ms-Button ms-Button--primary">Retry with explicit consent</button>
+                `;
+            }
+            
+            errorDiv.innerHTML = errorContent;
+            document.body.appendChild(errorDiv);
+            
+            // Add event listener for retry button if present
+            const retryButton = document.getElementById('retryConsentBtn');
+            if (retryButton) {
+                retryButton.onclick = function() {
+                    const retryParams = { ...requestObj, prompt: 'consent' };
+                    msalInstance.loginRedirect(retryParams);
+                };
+            }
+        }
+
+        // Get access token for Microsoft Graph API
         function getAccessToken() {
             console.log("[DEBUG] Getting access token");
             
@@ -326,33 +325,16 @@ Office.initialize = function (reason) {
                 .catch(function(error) {
                     console.log("[DEBUG] Error in silent token acquisition:", error);
                     
-                    // If silent acquisition fails, try popup with improved error handling
+                    // If silent acquisition fails, use redirect for token acquisition
                     if (error.name === "InteractionRequiredAuthError") {
-                        console.log("[DEBUG] Interaction required, using popup");
-                        updateStatus("Additional authentication required...");
+                        console.log("[DEBUG] Interaction required, using redirect");
+                        updateStatus("Additional authentication required. You will be redirected...");
                         
-                        return msalInstance.acquireTokenPopup(requestObj)
-                            .then(function(tokenResponse) {
-                                console.log("[DEBUG] Token acquired via popup");
-                                return tokenResponse.accessToken;
-                            })
-                            .catch(function(popupError) {
-                                console.error("[DEBUG] Popup token acquisition failed:", popupError);
-                                
-                                // If popup fails due to consent issues, try one more time with explicit consent prompt
-                                if (popupError.errorCode === "AADSTS65001") {
-                                    console.log("[DEBUG] Consent required, retrying with explicit consent prompt");
-                                    const consentRequestObj = { ...requestObj, prompt: 'consent' };
-                                    
-                                    return msalInstance.acquireTokenPopup(consentRequestObj)
-                                        .then(function(tokenResponse) {
-                                            console.log("[DEBUG] Token acquired with explicit consent");
-                                            return tokenResponse.accessToken;
-                                        });
-                                }
-                                
-                                throw popupError;
-                            });
+                        // Use redirect for token acquisition
+                        msalInstance.acquireTokenRedirect(requestObj);
+                        
+                        // Return a rejected promise to stop the current operation
+                        return Promise.reject(new Error('Redirecting for authentication...'));
                     }
                     
                     throw error;
@@ -487,6 +469,12 @@ Office.initialize = function (reason) {
                     }
                 })
                 .catch(function(error) {
+                    // Don't show error for redirect operations
+                    if (error.message === 'Redirecting for authentication...') {
+                        console.log("[DEBUG] Authentication redirect in progress");
+                        return;
+                    }
+                    
                     hideElement('loadingIndicator');
                     showError('Error loading plans: ' + error.message);
                     console.error("Error loading plans:", error);
@@ -572,6 +560,12 @@ Office.initialize = function (reason) {
                         updateStatus('Ready to create task');
                     })
                     .catch(function(error) {
+                        // Don't show error for redirect operations
+                        if (error.message === 'Redirecting for authentication...') {
+                            console.log("[DEBUG] Authentication redirect in progress");
+                            return;
+                        }
+                        
                         hideElement('loadingIndicator');
                         showError('Error loading plan details: ' + error.message);
                         console.error("Error loading plan details:", error);
@@ -694,6 +688,12 @@ Office.initialize = function (reason) {
                     }
                 })
                 .catch(function(error) {
+                    // Don't show error for redirect operations
+                    if (error.message === 'Redirecting for authentication...') {
+                        console.log("[DEBUG] Authentication redirect in progress");
+                        return;
+                    }
+                    
                     hideElement('loadingIndicator');
                     showError('Error creating task: ' + error.message);
                     console.error("Error creating task:", error);
