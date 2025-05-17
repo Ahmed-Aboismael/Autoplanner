@@ -6,13 +6,13 @@
            xsi:type="MailApp">
   <Id>0db24702-0b4a-4418-8974-2c51b60237a</Id>
   <Version>1.0.0.0</Version>
-  <ProviderName>Aboismael</ProviderName>
+  <ProviderName>Contoso</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="Auto Planner"/>
-  <Description DefaultValue="From Outlook to Planner"/>
+  <DisplayName DefaultValue="OutlookPlannerAddin"/>
+  <Description DefaultValue="A template to get started."/>
   <IconUrl DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/assets/icon-64.png"/>
   <HighResolutionIconUrl DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/assets/icon-128.png"/>
-  <SupportUrl DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/"/>
+  <SupportUrl DefaultValue="https://www.contoso.com/help"/>
   <AppDomains>
     <AppDomain>https://ahmed-aboismael.github.io</AppDomain>
   </AppDomains>
@@ -30,14 +30,6 @@
         <SourceLocation DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/taskpane.html"/>
         <RequestedHeight>250</RequestedHeight>
       </DesktopSettings>
-      <!-- Add Web Settings -->
-      <TabletSettings>
-        <SourceLocation DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/taskpane.html"/>
-        <RequestedHeight>250</RequestedHeight>
-      </TabletSettings>
-      <PhoneSettings>
-        <SourceLocation DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/taskpane.html"/>
-      </PhoneSettings>
     </Form>
   </FormSettings>
   <Permissions>ReadWriteItem</Permissions>
@@ -53,7 +45,6 @@
     </Requirements>
     <Hosts>
       <Host xsi:type="MailHost">
-        <!-- Desktop Form Factor -->
         <DesktopFormFactor>
           <ExtensionPoint xsi:type="MessageReadCommandSurface">
             <OfficeTab id="TabDefault">
@@ -78,32 +69,6 @@
             </OfficeTab>
           </ExtensionPoint>
         </DesktopFormFactor>
-        
-        <!-- ADD THIS: Web Form Factor -->
-        <WebFormFactor>
-          <ExtensionPoint xsi:type="MessageReadCommandSurface">
-            <OfficeTab id="TabDefault">
-              <Group id="msgReadGroup">
-                <Label resid="GroupLabel"/>
-                <Control xsi:type="Button" id="msgReadOpenPaneButton">
-                  <Label resid="TaskpaneButton.Label"/>
-                  <Supertip>
-                    <Title resid="TaskpaneButton.Label"/>
-                    <Description resid="TaskpaneButton.Tooltip"/>
-                  </Supertip>
-                  <Icon>
-                    <bt:Image size="16" resid="Icon.16x16"/>
-                    <bt:Image size="32" resid="Icon.32x32"/>
-                    <bt:Image size="80" resid="Icon.80x80"/>
-                  </Icon>
-                  <Action xsi:type="ShowTaskpane">
-                    <SourceLocation resid="Taskpane.Url"/>
-                  </Action>
-                </Control>
-              </Group>
-            </OfficeTab>
-          </ExtensionPoint>
-        </WebFormFactor>
       </Host>
     </Hosts>
     <Resources>
@@ -123,8 +88,6 @@
         <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Create a task in Microsoft Planner from this email"/>
       </bt:LongStrings>
     </Resources>
-    
-    <!-- ADD THIS: VersionOverrides V1_1 for WebApplicationInfo -->
     <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
       <Requirements>
         <bt:Sets DefaultMinVersion="1.3">
@@ -157,30 +120,6 @@
               </OfficeTab>
             </ExtensionPoint>
           </DesktopFormFactor>
-          <WebFormFactor>
-            <ExtensionPoint xsi:type="MessageReadCommandSurface">
-              <OfficeTab id="TabDefault">
-                <Group id="msgReadGroup">
-                  <Label resid="GroupLabel"/>
-                  <Control xsi:type="Button" id="msgReadOpenPaneButton">
-                    <Label resid="TaskpaneButton.Label"/>
-                    <Supertip>
-                      <Title resid="TaskpaneButton.Label"/>
-                      <Description resid="TaskpaneButton.Tooltip"/>
-                    </Supertip>
-                    <Icon>
-                      <bt:Image size="16" resid="Icon.16x16"/>
-                      <bt:Image size="32" resid="Icon.32x32"/>
-                      <bt:Image size="80" resid="Icon.80x80"/>
-                    </Icon>
-                    <Action xsi:type="ShowTaskpane">
-                      <SourceLocation resid="Taskpane.Url"/>
-                    </Action>
-                  </Control>
-                </Group>
-              </OfficeTab>
-            </ExtensionPoint>
-          </WebFormFactor>
         </Host>
       </Hosts>
       <Resources>
