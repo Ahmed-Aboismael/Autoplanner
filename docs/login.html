@@ -57,6 +57,16 @@
         .hidden {
             display: none;
         }
+        #debugInfo {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            overflow-wrap: break-word;
+        }
     </style>
 </head>
 <body>
@@ -68,21 +78,48 @@
         <div id="loginContainer">
             <button id="loginButton">Sign in with Microsoft</button>
         </div>
+        <div id="debugInfo" class="hidden"></div>
     </div>
 
     <script>
+        // Display debug information
+        function showDebugInfo(title, info) {
+            const debugElement = document.getElementById('debugInfo');
+            debugElement.classList.remove('hidden');
+            debugElement.innerHTML += `<strong>${title}:</strong>\n${JSON.stringify(info, null, 2)}\n\n`;
+        }
+
+        // Get the exact current URL to use as redirect URI
+        const currentUrl = window.location.href.split('#')[0].split('?')[0];
+        showDebugInfo('Current URL (Redirect URI)', currentUrl);
+
         // Configuration for MSAL
         const msalConfig = {
             auth: {
                 clientId: '60ca32af-6d83-4369-8a0a-dce7bb909d9d',
                 authority: 'https://login.microsoftonline.com/organizations',
-                redirectUri: window.location.href
+                redirectUri: currentUrl, // Use exact current URL
+                postLogoutRedirectUri: currentUrl
             },
             cache: {
                 cacheLocation: 'sessionStorage',
                 storeAuthStateInCookie: false
+            },
+            system: {
+                loggerOptions: {
+                    loggerCallback: (level, message, containsPii) => {
+                        if (!containsPii) {
+                            console.log(`[MSAL] ${message}`);
+                            showDebugInfo('MSAL Log', message);
+                        }
+                    },
+                    piiLoggingEnabled: false,
+                    logLevel: 4 // Verbose
+                }
             }
         };
+
+        showDebugInfo('MSAL Config', msalConfig);
 
         // Request object with minimal permissions
         const requestObj = {
@@ -98,6 +135,7 @@
         try {
             msalInstance = new msal.PublicClientApplication(msalConfig);
             updateStatus('Authentication initialized', 'info');
+            showDebugInfo('MSAL Initialized', 'Success');
             
             // Check if we have a response from a redirect
             msalInstance.handleRedirectPromise()
@@ -113,18 +151,25 @@
         // Login function
         function login() {
             updateStatus('Starting authentication...', 'info');
+            showDebugInfo('Login Attempt', new Date().toISOString());
             
-            // Use loginPopup with a single prompt value
-            msalInstance.loginPopup({
-                ...requestObj,
-                prompt: 'consent'  // Use only one prompt value
-            })
-            .then(handleResponse)
-            .catch(handleError);
+            try {
+                // Use loginPopup with a single prompt value
+                msalInstance.loginPopup({
+                    ...requestObj,
+                    prompt: 'consent'  // Use only one prompt value
+                })
+                .then(handleResponse)
+                .catch(handleError);
+            } catch (error) {
+                handleError(error);
+            }
         }
 
         // Handle authentication response
         function handleResponse(response) {
+            showDebugInfo('Auth Response', response || 'No response data');
+            
             if (response) {
                 // We have a successful authentication response
                 updateStatus('Authentication successful', 'success');
@@ -132,12 +177,21 @@
                 // Get user info
                 const account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0];
                 if (account) {
+                    showDebugInfo('Account', account);
+                    
                     // Acquire token silently
                     msalInstance.acquireTokenSilent({
                         ...requestObj,
                         account: account
                     })
                     .then(tokenResponse => {
+                        showDebugInfo('Token Response', {
+                            tokenType: tokenResponse.tokenType,
+                            expiresOn: tokenResponse.expiresOn,
+                            scopes: tokenResponse.scopes,
+                            tokenLength: tokenResponse.accessToken ? tokenResponse.accessToken.length : 0
+                        });
+                        
                         // Send token back to parent window
                         const message = {
                             type: 'AUTH_SUCCESS',
@@ -146,8 +200,14 @@
                             userEmail: account.username
                         };
                         
-                        // Send message to parent
-                        Office.context.ui.messageParent(JSON.stringify(message));
+                        try {
+                            // Send message to parent
+                            Office.context.ui.messageParent(JSON.stringify(message));
+                            showDebugInfo('Message Sent to Parent', 'Success');
+                        } catch (error) {
+                            showDebugInfo('Error Sending Message', error);
+                            updateStatus('Error sending token to add-in: ' + error.message, 'error');
+                        }
                     })
                     .catch(error => {
                         handleError(error);
@@ -158,6 +218,8 @@
             } else {
                 // Check if we already have an account
                 const accounts = msalInstance.getAllAccounts();
+                showDebugInfo('Existing Accounts', accounts);
+                
                 if (accounts.length > 0) {
                     msalInstance.setActiveAccount(accounts[0]);
                     
@@ -167,6 +229,13 @@
                         account: accounts[0]
                     })
                     .then(tokenResponse => {
+                        showDebugInfo('Token Response (Silent)', {
+                            tokenType: tokenResponse.tokenType,
+                            expiresOn: tokenResponse.expiresOn,
+                            scopes: tokenResponse.scopes,
+                            tokenLength: tokenResponse.accessToken ? tokenResponse.accessToken.length : 0
+                        });
+                        
                         // Send token back to parent window
                         const message = {
                             type: 'AUTH_SUCCESS',
@@ -175,11 +244,18 @@
                             userEmail: accounts[0].username
                         };
                         
-                        // Send message to parent
-                        Office.context.ui.messageParent(JSON.stringify(message));
+                        try {
+                            // Send message to parent
+                            Office.context.ui.messageParent(JSON.stringify(message));
+                            showDebugInfo('Message Sent to Parent', 'Success');
+                        } catch (error) {
+                            showDebugInfo('Error Sending Message', error);
+                            updateStatus('Error sending token to add-in: ' + error.message, 'error');
+                        }
                     })
                     .catch(error => {
                         // If silent token acquisition fails, show login button
+                        showDebugInfo('Silent Token Error', error);
                         document.getElementById('loginContainer').classList.remove('hidden');
                     });
                 } else {
@@ -192,6 +268,7 @@
         // Handle authentication error
         function handleError(error) {
             console.error('Authentication error:', error);
+            showDebugInfo('Authentication Error', error);
             
             let errorMessage = error.message || 'Unknown authentication error';
             updateStatus('Error: ' + errorMessage, 'error');
@@ -214,8 +291,10 @@
                     error: errorMessage
                 };
                 Office.context.ui.messageParent(JSON.stringify(message));
+                showDebugInfo('Error Message Sent to Parent', 'Success');
             } catch (e) {
                 console.error('Error sending message to parent:', e);
+                showDebugInfo('Error Sending Error Message', e);
             }
         }
 
