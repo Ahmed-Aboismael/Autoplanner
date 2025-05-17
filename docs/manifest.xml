@@ -202,7 +202,7 @@
       </Resources>
       <WebApplicationInfo>
         <Id>60ca32af-6d83-4369-8a0a-dce7bb909d9d</Id>
-        <Resource>api://60ca32af-6d83-4369-8a0a-dce7bb909d9d</Resource>
+        <Resource>api://Ahmed-Aboismael.github.io/Autoplanner/60ca32af-6d83-4369-8a0a-dce7bb909d9d</Resource>
         <Scopes>
           <Scope>Files.ReadWrite.All</Scope>
           <Scope>Group.Read.All</Scope>
