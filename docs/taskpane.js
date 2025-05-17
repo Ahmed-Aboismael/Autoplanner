@@ -1,5 +1,5 @@
-// Optimized taskpane.js with improved authentication flow
-// This version maintains all permissions while addressing admin approval issues
+// Reset taskpane.js with forced token clearing and minimal permissions
+// This version implements a fresh authentication flow to eliminate admin approval
 
 // Use Office.initialize instead of Office.onReady to ensure proper loading sequence
 Office.initialize = function (reason) {
@@ -10,11 +10,14 @@ Office.initialize = function (reason) {
     $(document).ready(function() {
         console.log("[DEBUG] Document ready event fired");
         
+        // Clear all cached tokens and state immediately
+        clearAllTokens();
+        
         // Get the current page URL to use as redirect URI
         const currentUrl = window.location.href.split('?')[0]; // Remove any query parameters
         console.log("[DEBUG] Using current URL as redirect URI:", currentUrl);
         
-        // MSAL configuration with improved settings for public use
+        // MSAL configuration with minimal permissions and improved settings
         const msalConfig = {
             auth: {
                 clientId: '60ca32af-6d83-4369-8a0a-dce7bb909d9d',
@@ -25,8 +28,8 @@ Office.initialize = function (reason) {
                 navigateToLoginRequestUrl: true
             },
             cache: {
-                cacheLocation: 'localStorage',
-                storeAuthStateInCookie: true
+                cacheLocation: 'sessionStorage', // Use sessionStorage instead of localStorage for better isolation
+                storeAuthStateInCookie: false     // Disable cookies to prevent persistent state
             },
             system: {
                 loggerOptions: {
@@ -46,6 +49,17 @@ Office.initialize = function (reason) {
             console.log("[DEBUG] MSAL initialized successfully");
             updateStatus("MSAL initialized successfully");
             
+            // Force logout to clear any existing tokens
+            if (msalInstance.getAccount()) {
+                console.log("[DEBUG] Existing account found, forcing logout");
+                msalInstance.logout();
+                // Reload the page after logout to ensure clean state
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+                return;
+            }
+            
             // Register redirect callback
             msalInstance.handleRedirectCallback((error, response) => {
                 if (error) {
@@ -62,17 +76,13 @@ Office.initialize = function (reason) {
             showError("Failed to initialize MSAL: " + error.message);
         }
 
-        // Configure the request with your existing permissions
-        // All these permissions are user-consentable according to your screenshot
+        // Configure the request with MINIMAL permission scopes
+        // Only request what's absolutely necessary for basic functionality
         const requestObj = {
             scopes: [
-                'User.Read',
-                'Files.ReadWrite.All',
-                'Mail.Read',
-                'offline_access',
-                'openid',
-                'profile',
-                'Tasks.ReadWrite',
+                'User.Read',       // Basic profile
+                'Tasks.ReadWrite', // Tasks access
+                'Mail.Read'        // Email access
             ]
         };
         
@@ -151,16 +161,42 @@ Office.initialize = function (reason) {
             console.error("planSelector not found");
         }
         
-        // Check if user is already signed in
-        if (msalInstance && msalInstance.getAccount()) {
-            const account = msalInstance.getAccount();
-            updateStatus('User already signed in as: ' + account.userName + '. Loading plans...');
-            console.log("[DEBUG] User account:", account);
-            loadPlannerPlans();
-        } else {
-            updateStatus('Please sign in to access your Planner plans');
-            // Add a sign-in button instead of auto-authenticating
-            addSignInButton();
+        // Add a sign-in button instead of auto-authenticating
+        addSignInButton();
+
+        // Function to clear all tokens and cached state
+        function clearAllTokens() {
+            console.log("[DEBUG] Clearing all tokens and cached state");
+            
+            // Clear localStorage
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                if (key && (key.indexOf('msal') !== -1 || key.indexOf('login') !== -1 || key.indexOf('token') !== -1)) {
+                    console.log("[DEBUG] Removing localStorage key:", key);
+                    localStorage.removeItem(key);
+                    i--; // Adjust index since we're removing items
+                }
+            }
+            
+            // Clear sessionStorage
+            for (let i = 0; i < sessionStorage.length; i++) {
+                const key = sessionStorage.key(i);
+                if (key && (key.indexOf('msal') !== -1 || key.indexOf('login') !== -1 || key.indexOf('token') !== -1)) {
+                    console.log("[DEBUG] Removing sessionStorage key:", key);
+                    sessionStorage.removeItem(key);
+                    i--; // Adjust index since we're removing items
+                }
+            }
+            
+            // Clear cookies related to authentication
+            document.cookie.split(';').forEach(function(c) {
+                if (c.trim().indexOf('msal') === 0 || c.trim().indexOf('login') === 0 || c.trim().indexOf('token') === 0) {
+                    document.cookie = c.replace(/^ +/, '').replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
+                    console.log("[DEBUG] Removed cookie:", c.trim());
+                }
+            });
+            
+            console.log("[DEBUG] Token clearing complete");
         }
 
         // Add a sign-in button to the UI
@@ -176,6 +212,15 @@ Office.initialize = function (reason) {
             signInButton.onclick = authenticateWithPopup;
             
             signInArea.appendChild(signInButton);
+            
+            // Add troubleshooting info
+            const troubleshootingInfo = document.createElement('div');
+            troubleshootingInfo.style.margin = '10px 0';
+            troubleshootingInfo.style.fontSize = '12px';
+            troubleshootingInfo.style.color = '#666';
+            troubleshootingInfo.innerHTML = 'If you encounter admin approval screens, try:<br>1. Using incognito/private browsing<br>2. Clearing browser cache<br>3. Using a different browser';
+            
+            signInArea.appendChild(troubleshootingInfo);
             
             // Find a good place to insert the button
             const formElement = document.querySelector('form') || document.body;
@@ -195,12 +240,13 @@ Office.initialize = function (reason) {
             
             // Add loginHint if available to improve the sign-in experience
             const loginHint = Office.context.mailbox.userProfile.emailAddress;
-            const authParams = { ...requestObj };
-            if (loginHint) {
-                authParams.loginHint = loginHint;
-                // Also add prompt=consent to force a fresh consent experience
-                authParams.prompt = 'consent';
-            }
+            
+            // Create authentication parameters with explicit consent and prompt
+            const authParams = { 
+                ...requestObj,
+                prompt: 'select_account consent', // Force account selection and consent
+                loginHint: loginHint || ''
+            };
             
             console.log("[DEBUG] Starting popup authentication with params:", authParams);
             msalInstance.loginPopup(authParams)
@@ -313,7 +359,7 @@ Office.initialize = function (reason) {
                 });
         }
 
-        // Load Planner plans
+        // Load Planner plans - MODIFIED to work without Group.Read.All permission
         function loadPlannerPlans() {
             updateStatus('Loading your Planner plans...');
             showElement('loadingIndicator');
@@ -321,23 +367,84 @@ Office.initialize = function (reason) {
             getAccessToken()
                 .then(function(accessToken) {
                     console.log("[DEBUG] Access token obtained, length:", accessToken.length);
-                    // Get all plans the user has access to
-                    updateStatus('Fetching plans from Microsoft Graph API...');
-                    return fetch('https://graph.microsoft.com/v1.0/me/planner/plans', {
+                    // Get plans the user has access to - using /me/planner/tasks instead of /me/planner/plans
+                    // This works without requiring Group.Read.All permission
+                    updateStatus('Fetching tasks from Microsoft Graph API...');
+                    return fetch('https://graph.microsoft.com/v1.0/me/planner/tasks', {
                         headers: {
                             'Authorization': 'Bearer ' + accessToken
                         }
                     });
                 })
                 .then(function(response) {
-                    console.log("[DEBUG] Plans API response status:", response.status);
+                    console.log("[DEBUG] Tasks API response status:", response.status);
                     if (!response.ok) {
-                        throw new Error('Failed to fetch plans: ' + response.status);
+                        throw new Error('Failed to fetch tasks: ' + response.status);
                     }
                     return response.json();
                 })
                 .then(function(data) {
-                    console.log("[DEBUG] Plans data received:", data);
+                    console.log("[DEBUG] Tasks data received:", data);
+                    
+                    // Extract unique plan IDs from tasks
+                    const planIds = new Set();
+                    if (data.value && data.value.length > 0) {
+                        data.value.forEach(task => {
+                            if (task.planId) {
+                                planIds.add(task.planId);
+                            }
+                        });
+                    }
+                    
+                    // If we found plan IDs, fetch details for each plan
+                    if (planIds.size > 0) {
+                        const planPromises = Array.from(planIds).map(planId => {
+                            return getAccessToken().then(accessToken => {
+                                return fetch(`https://graph.microsoft.com/v1.0/planner/plans/${planId}`, {
+                                    headers: {
+                                        'Authorization': 'Bearer ' + accessToken
+                                    }
+                                })
+                                .then(response => {
+                                    if (!response.ok) {
+                                        console.warn(`Could not fetch details for plan ${planId}: ${response.status}`);
+                                        return null;
+                                    }
+                                    return response.json();
+                                })
+                                .catch(error => {
+                                    console.warn(`Error fetching plan ${planId}:`, error);
+                                    return null;
+                                });
+                            });
+                        });
+                        
+                        return Promise.all(planPromises);
+                    } else {
+                        // If no tasks found, try to get plans directly
+                        // This might work for some users depending on their permissions
+                        return getAccessToken().then(accessToken => {
+                            return fetch('https://graph.microsoft.com/v1.0/me/planner/plans', {
+                                headers: {
+                                    'Authorization': 'Bearer ' + accessToken
+                                }
+                            })
+                            .then(response => {
+                                if (!response.ok) {
+                                    console.warn("Could not fetch plans directly:", response.status);
+                                    return { value: [] };
+                                }
+                                return response.json();
+                            })
+                            .catch(error => {
+                                console.warn("Error fetching plans directly:", error);
+                                return { value: [] };
+                            });
+                        });
+                    }
+                })
+                .then(function(plansData) {
+                    console.log("[DEBUG] Plans data received:", plansData);
                     hideElement('loadingIndicator');
                     
                     const plannerSelect = document.getElementById('planSelector');
@@ -345,8 +452,17 @@ Office.initialize = function (reason) {
                         throw new Error('planSelector element not found');
                     }
                     
-                    if (data.value && data.value.length > 0) {
-                        updateStatus('Plans loaded successfully: ' + data.value.length + ' plans found');
+                    // Handle both array of plans (from tasks) and direct plans response
+                    let plans = [];
+                    if (Array.isArray(plansData)) {
+                        // Filter out null results (failed plan fetches)
+                        plans = plansData.filter(plan => plan !== null);
+                    } else if (plansData && plansData.value) {
+                        plans = plansData.value;
+                    }
+                    
+                    if (plans && plans.length > 0) {
+                        updateStatus('Plans loaded successfully: ' + plans.length + ' plans found');
                         
                         // Clear existing options
                         plannerSelect.innerHTML = '';
@@ -358,7 +474,7 @@ Office.initialize = function (reason) {
                         plannerSelect.appendChild(defaultOption);
                         
                         // Add plans to dropdown
-                        data.value.forEach(function(plan) {
+                        plans.forEach(function(plan) {
                             const option = document.createElement('option');
                             option.value = plan.id;
                             option.text = plan.title;
@@ -366,8 +482,8 @@ Office.initialize = function (reason) {
                             console.log("[DEBUG] Added plan:", plan.title);
                         });
                     } else {
-                        updateStatus('No plans found. Please create a plan in Microsoft Planner first.');
-                        console.log("[DEBUG] No plans found in data:", data);
+                        updateStatus('No plans found. You may need to create a plan in Microsoft Planner first.');
+                        console.log("[DEBUG] No plans found in data");
                     }
                 })
                 .catch(function(error) {
@@ -384,7 +500,7 @@ Office.initialize = function (reason) {
                         retryButton.onclick = function() {
                             msalInstance.logout();
                             setTimeout(() => {
-                                authenticateWithPopup();
+                                window.location.reload();
                             }, 1000);
                         };
                         document.body.appendChild(retryButton);
@@ -392,7 +508,7 @@ Office.initialize = function (reason) {
                 });
         }
 
-        // Handle plan selection change
+        // Handle plan selection change - MODIFIED to work without Group.Read.All permission
         function onPlannerSelectionChange() {
             const plannerSelect = document.getElementById('planSelector');
             if (!plannerSelect) {
@@ -404,94 +520,31 @@ Office.initialize = function (reason) {
             console.log("[DEBUG] Plan selection changed to:", selectedPlanId);
             
             if (selectedPlanId) {
-                updateStatus('Loading assignees for selected plan...');
+                updateStatus('Loading tasks for selected plan...');
                 showElement('loadingIndicator');
                 
                 getAccessToken()
                     .then(function(accessToken) {
-                        // Get group members for the selected plan
-                        return fetch(`https://graph.microsoft.com/v1.0/planner/plans/${selectedPlanId}/details`, {
+                        // Get tasks for the selected plan
+                        return fetch(`https://graph.microsoft.com/v1.0/planner/plans/${selectedPlanId}/tasks`, {
                             headers: {
                                 'Authorization': 'Bearer ' + accessToken
                             }
                         });
                     })
                     .then(function(response) {
-                        console.log("[DEBUG] Plan details API response status:", response.status);
+                        console.log("[DEBUG] Plan tasks API response status:", response.status);
                         if (!response.ok) {
-                            throw new Error('Failed to fetch plan details: ' + response.status);
+                            throw new Error('Failed to fetch plan tasks: ' + response.status);
                         }
                         return response.json();
                     })
-                    .then(function(planDetails) {
-                        console.log("[DEBUG] Plan details received:", planDetails);
-                        
-                        // Get the group ID associated with the plan
-                        return getAccessToken().then(accessToken => {
-                            return fetch(`https://graph.microsoft.com/v1.0/planner/plans/${selectedPlanId}`, {
-                                headers: {
-                                    'Authorization': 'Bearer ' + accessToken
-                                }
-                            });
-                        });
-                    })
-                    .then(function(response) {
-                        console.log("[DEBUG] Plan API response status:", response.status);
-                        if (!response.ok) {
-                            throw new Error('Failed to fetch plan: ' + response.status);
-                        }
-                        return response.json();
-                    })
-                    .then(function(planData) {
-                        console.log("[DEBUG] Plan data received:", planData);
-                        
-                        if (planData.owner) {
-                            const groupId = planData.owner;
-                            
-                            // Try to get members of the group
-                            return getAccessToken().then(accessToken => {
-                                return fetch(`https://graph.microsoft.com/v1.0/groups/${groupId}/members`, {
-                                    headers: {
-                                        'Authorization': 'Bearer ' + accessToken
-                                    }
-                                });
-                            })
-                            .catch(error => {
-                                // If we can't get group members, fall back to current user only
-                                console.warn("Could not fetch group members:", error);
-                                return { ok: false, status: 403 };
-                            });
-                        } else {
-                            throw new Error('No owner group found for this plan');
-                        }
-                    })
-                    .then(function(response) {
-                        console.log("[DEBUG] Members API response status:", response.status);
-                        
-                        // If we can access group members, use them
-                        if (response.ok) {
-                            return response.json().then(membersData => {
-                                return { type: 'group', data: membersData };
-                            });
-                        } 
-                        // Otherwise fall back to just the current user
-                        else {
-                            console.log("[DEBUG] Falling back to current user as assignee");
-                            return { 
-                                type: 'currentUser', 
-                                data: { 
-                                    value: [{ 
-                                        id: msalInstance.getAccount().accountIdentifier,
-                                        displayName: msalInstance.getAccount().name || msalInstance.getAccount().userName
-                                    }] 
-                                } 
-                            };
-                        }
-                    })
-                    .then(function(result) {
-                        console.log("[DEBUG] Assignee data received:", result);
+                    .then(function(tasksData) {
+                        console.log("[DEBUG] Plan tasks received:", tasksData);
                         hideElement('loadingIndicator');
                         
+                        // Since we can't get group members without Group.Read.All permission,
+                        // we'll just populate the assignee dropdown with the current user
                         const assigneeSelect = document.getElementById('assigneeSelector');
                         if (!assigneeSelect) {
                             throw new Error('assigneeSelector element not found');
@@ -506,55 +559,22 @@ Office.initialize = function (reason) {
                         defaultOption.text = '-- Select an assignee --';
                         assigneeSelect.appendChild(defaultOption);
                         
-                        // Add members to dropdown
-                        const membersData = result.data;
-                        if (membersData.value && membersData.value.length > 0) {
-                            membersData.value.forEach(function(member) {
-                                const option = document.createElement('option');
-                                option.value = member.id;
-                                option.text = member.displayName || member.userPrincipalName || member.id;
-                                assigneeSelect.appendChild(option);
-                                console.log("[DEBUG] Added assignee:", option.text);
-                            });
-                            
-                            if (result.type === 'currentUser') {
-                                updateStatus('Only your user account is available as assignee');
-                            } else {
-                                updateStatus('Assignees loaded successfully');
-                            }
-                        } else {
-                            updateStatus('No assignees found for this plan');
+                        // Add current user as the only assignee option
+                        if (msalInstance && msalInstance.getAccount()) {
+                            const currentUser = msalInstance.getAccount();
+                            const option = document.createElement('option');
+                            option.value = currentUser.accountIdentifier || currentUser.userName;
+                            option.text = currentUser.name || currentUser.userName;
+                            assigneeSelect.appendChild(option);
+                            console.log("[DEBUG] Added current user as assignee:", option.text);
                         }
+                        
+                        updateStatus('Ready to create task');
                     })
                     .catch(function(error) {
                         hideElement('loadingIndicator');
-                        showError('Error loading assignees: ' + error.message);
-                        console.error("Error loading assignees:", error);
-                        
-                        // Add fallback for assignee selection
-                        const assigneeSelect = document.getElementById('assigneeSelector');
-                        if (assigneeSelect) {
-                            // Clear existing options
-                            assigneeSelect.innerHTML = '';
-                            
-                            // Add default option
-                            const defaultOption = document.createElement('option');
-                            defaultOption.value = '';
-                            defaultOption.text = '-- Select an assignee --';
-                            assigneeSelect.appendChild(defaultOption);
-                            
-                            // Add current user as fallback
-                            if (msalInstance && msalInstance.getAccount()) {
-                                const currentUser = msalInstance.getAccount();
-                                const option = document.createElement('option');
-                                option.value = currentUser.accountIdentifier || currentUser.userName;
-                                option.text = currentUser.name || currentUser.userName;
-                                assigneeSelect.appendChild(option);
-                                console.log("[DEBUG] Added current user as fallback assignee:", option.text);
-                                
-                                updateStatus('Using current user as assignee (fallback mode)');
-                            }
-                        }
+                        showError('Error loading plan details: ' + error.message);
+                        console.error("Error loading plan details:", error);
                     });
             }
         }
