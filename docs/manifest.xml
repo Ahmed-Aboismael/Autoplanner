@@ -1,14 +1,18 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0" xsi:type="MailApp">
-  <Id>0db24702-0b4a-4418-8974-2c510b60237a</Id>
+<OfficeApp xmlns="http://schemas.microsoft.com/office/appforoffice/1.1" 
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+           xmlns:bt="http://schemas.microsoft.com/office/officeappbasictypes/1.0" 
+           xmlns:mailappor="http://schemas.microsoft.com/office/mailappversionoverrides/1.0"
+           xsi:type="MailApp">
+  <Id>0db24702-0b4a-4418-8974-2c51b60237a</Id>
   <Version>1.0.0.0</Version>
-  <ProviderName>Contoso</ProviderName>
+  <ProviderName>Aboismael</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
-  <DisplayName DefaultValue="OutlookPlannerAddin"/>
-  <Description DefaultValue="A template to get started."/>
+  <DisplayName DefaultValue="Auto Planner"/>
+  <Description DefaultValue="From Outlook to Planner"/>
   <IconUrl DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/assets/icon-64.png"/>
   <HighResolutionIconUrl DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/assets/icon-128.png"/>
-  <SupportUrl DefaultValue="https://www.contoso.com/help"/>
+  <SupportUrl DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/"/>
   <AppDomains>
     <AppDomain>https://ahmed-aboismael.github.io</AppDomain>
   </AppDomains>
@@ -26,6 +30,14 @@
         <SourceLocation DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/taskpane.html"/>
         <RequestedHeight>250</RequestedHeight>
       </DesktopSettings>
+      <!-- Add Web Settings -->
+      <TabletSettings>
+        <SourceLocation DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/taskpane.html"/>
+        <RequestedHeight>250</RequestedHeight>
+      </TabletSettings>
+      <PhoneSettings>
+        <SourceLocation DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/taskpane.html"/>
+      </PhoneSettings>
     </Form>
   </FormSettings>
   <Permissions>ReadWriteItem</Permissions>
@@ -33,7 +45,6 @@
     <Rule xsi:type="ItemIs" ItemType="Message" FormType="Read"/>
   </Rule>
   <DisableEntityHighlighting>false</DisableEntityHighlighting>
-  
   <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides" xsi:type="VersionOverridesV1_0">
     <Requirements>
       <bt:Sets DefaultMinVersion="1.3">
@@ -42,6 +53,7 @@
     </Requirements>
     <Hosts>
       <Host xsi:type="MailHost">
+        <!-- Desktop Form Factor -->
         <DesktopFormFactor>
           <ExtensionPoint xsi:type="MessageReadCommandSurface">
             <OfficeTab id="TabDefault">
@@ -66,6 +78,32 @@
             </OfficeTab>
           </ExtensionPoint>
         </DesktopFormFactor>
+        
+        <!-- ADD THIS: Web Form Factor -->
+        <WebFormFactor>
+          <ExtensionPoint xsi:type="MessageReadCommandSurface">
+            <OfficeTab id="TabDefault">
+              <Group id="msgReadGroup">
+                <Label resid="GroupLabel"/>
+                <Control xsi:type="Button" id="msgReadOpenPaneButton">
+                  <Label resid="TaskpaneButton.Label"/>
+                  <Supertip>
+                    <Title resid="TaskpaneButton.Label"/>
+                    <Description resid="TaskpaneButton.Tooltip"/>
+                  </Supertip>
+                  <Icon>
+                    <bt:Image size="16" resid="Icon.16x16"/>
+                    <bt:Image size="32" resid="Icon.32x32"/>
+                    <bt:Image size="80" resid="Icon.80x80"/>
+                  </Icon>
+                  <Action xsi:type="ShowTaskpane">
+                    <SourceLocation resid="Taskpane.Url"/>
+                  </Action>
+                </Control>
+              </Group>
+            </OfficeTab>
+          </ExtensionPoint>
+        </WebFormFactor>
       </Host>
     </Hosts>
     <Resources>
@@ -78,28 +116,102 @@
         <bt:Url id="Taskpane.Url" DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
-        <bt:String id="GroupLabel" DefaultValue="AutoPlanner"/>
+        <bt:String id="GroupLabel" DefaultValue="Planner Add-in"/>
         <bt:String id="TaskpaneButton.Label" DefaultValue="Create Planner Task"/>
       </bt:ShortStrings>
       <bt:LongStrings>
-        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Open to create a new task in Microsoft Planner from this email."/>
+        <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Create a task in Microsoft Planner from this email"/>
       </bt:LongStrings>
     </Resources>
     
-    <!-- Nested VersionOverridesV1_1 for WebApplicationInfo -->
+    <!-- ADD THIS: VersionOverrides V1_1 for WebApplicationInfo -->
     <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
+      <Requirements>
+        <bt:Sets DefaultMinVersion="1.3">
+          <bt:Set Name="Mailbox"/>
+        </bt:Sets>
+      </Requirements>
+      <Hosts>
+        <Host xsi:type="MailHost">
+          <DesktopFormFactor>
+            <ExtensionPoint xsi:type="MessageReadCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="msgReadGroup">
+                  <Label resid="GroupLabel"/>
+                  <Control xsi:type="Button" id="msgReadOpenPaneButton">
+                    <Label resid="TaskpaneButton.Label"/>
+                    <Supertip>
+                      <Title resid="TaskpaneButton.Label"/>
+                      <Description resid="TaskpaneButton.Tooltip"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Icon.16x16"/>
+                      <bt:Image size="32" resid="Icon.32x32"/>
+                      <bt:Image size="80" resid="Icon.80x80"/>
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="Taskpane.Url"/>
+                    </Action>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+          </DesktopFormFactor>
+          <WebFormFactor>
+            <ExtensionPoint xsi:type="MessageReadCommandSurface">
+              <OfficeTab id="TabDefault">
+                <Group id="msgReadGroup">
+                  <Label resid="GroupLabel"/>
+                  <Control xsi:type="Button" id="msgReadOpenPaneButton">
+                    <Label resid="TaskpaneButton.Label"/>
+                    <Supertip>
+                      <Title resid="TaskpaneButton.Label"/>
+                      <Description resid="TaskpaneButton.Tooltip"/>
+                    </Supertip>
+                    <Icon>
+                      <bt:Image size="16" resid="Icon.16x16"/>
+                      <bt:Image size="32" resid="Icon.32x32"/>
+                      <bt:Image size="80" resid="Icon.80x80"/>
+                    </Icon>
+                    <Action xsi:type="ShowTaskpane">
+                      <SourceLocation resid="Taskpane.Url"/>
+                    </Action>
+                  </Control>
+                </Group>
+              </OfficeTab>
+            </ExtensionPoint>
+          </WebFormFactor>
+        </Host>
+      </Hosts>
+      <Resources>
+        <bt:Images>
+          <bt:Image id="Icon.16x16" DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/assets/icon-16.png"/>
+          <bt:Image id="Icon.32x32" DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/assets/icon-32.png"/>
+          <bt:Image id="Icon.80x80" DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/assets/icon-80.png"/>
+        </bt:Images>
+        <bt:Urls>
+          <bt:Url id="Taskpane.Url" DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/taskpane.html"/>
+        </bt:Urls>
+        <bt:ShortStrings>
+          <bt:String id="GroupLabel" DefaultValue="Planner Add-in"/>
+          <bt:String id="TaskpaneButton.Label" DefaultValue="Create Planner Task"/>
+        </bt:ShortStrings>
+        <bt:LongStrings>
+          <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Create a task in Microsoft Planner from this email"/>
+        </bt:LongStrings>
+      </Resources>
       <WebApplicationInfo>
         <Id>60ca32af-6d83-4369-8a0a-dce7bb909d9d</Id>
-        <Resource>api://Ahmed-Aboismael.github.io/Autoplanner/60ca32af-6d83-4369-8a0a-dce7bb909d9d</Resource>
+        <Resource>api://60ca32af-6d83-4369-8a0a-dce7bb909d9d</Resource>
         <Scopes>
+          <Scope>Files.ReadWrite.All</Scope>
+          <Scope>Group.Read.All</Scope>
+          <Scope>Mail.Read</Scope>
+          <Scope>offline_access</Scope>
           <Scope>openid</Scope>
           <Scope>profile</Scope>
-          <Scope>offline_access</Scope>
-          <Scope>User.Read</Scope>
-          <Scope>Mail.Read</Scope>
           <Scope>Tasks.ReadWrite</Scope>
-          <Scope>Group.Read.All</Scope>
-          <Scope>Files.ReadWrite.All</Scope>
+          <Scope>User.Read</Scope>
         </Scopes>
       </WebApplicationInfo>
     </VersionOverrides>
