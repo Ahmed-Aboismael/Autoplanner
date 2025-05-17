@@ -68,10 +68,6 @@
         </DesktopFormFactor>
       </Host>
     </Hosts>
-    <!-- Add Runtimes element here -->
-    <Runtimes>
-      <Runtime resid="Taskpane.Url" lifetime="long" />
-    </Runtimes>
     <Resources>
       <bt:Images>
         <bt:Image id="Icon.16x16" DefaultValue="https://ahmed-aboismael.github.io/Autoplanner/assets/icon-16.png"/>
