@@ -1,4 +1,4 @@
-// Multi-tenant taskpane.js with public use authentication
+// Multi-tenant taskpane.js with fixed redirect URI handling
 // This version implements cross-tenant authentication for public use
 
 // Use Office.initialize instead of Office.onReady to ensure proper loading sequence
@@ -10,19 +10,32 @@ Office.initialize = function (reason) {
     $(document).ready(function() {
         console.log("[DEBUG] Document ready event fired");
         
-        // MSAL configuration for multi-tenant authentication
+        // Get the current page URL to use as redirect URI
+        const currentUrl = window.location.href.split('?')[0]; // Remove any query parameters
+        console.log("[DEBUG] Using current URL as redirect URI:", currentUrl);
+        
+        // MSAL configuration for multi-tenant authentication with explicit redirect URI
         const msalConfig = {
             auth: {
                 clientId: '60ca32af-6d83-4369-8a0a-dce7bb909d9d',
                 // Use 'organizations' instead of 'common' for multi-tenant business apps
-                // This allows any work or school account but not personal Microsoft accounts
                 authority: 'https://login.microsoftonline.com/organizations',
-                redirectUri: 'https://ahmed-aboismael.github.io/Autoplanner/taskpane.html',
-                navigateToLoginRequestUrl: false
+                redirectUri: currentUrl, // Use current page URL as redirect URI
+                postLogoutRedirectUri: currentUrl,
+                navigateToLoginRequestUrl: true
             },
             cache: {
                 cacheLocation: 'localStorage',
                 storeAuthStateInCookie: true
+            },
+            system: {
+                loggerOptions: {
+                    loggerCallback: (level, message, containsPii) => {
+                        if (!containsPii) console.log("[MSAL]", message);
+                    },
+                    piiLoggingEnabled: false,
+                    logLevel: 3 // Verbose logging for debugging
+                }
             }
         };
 
@@ -32,6 +45,18 @@ Office.initialize = function (reason) {
             msalInstance = new Msal.UserAgentApplication(msalConfig);
             console.log("[DEBUG] MSAL initialized successfully");
             updateStatus("MSAL initialized successfully");
+            
+            // Register redirect callback
+            msalInstance.handleRedirectCallback((error, response) => {
+                if (error) {
+                    console.error("[DEBUG] Redirect callback error:", error);
+                    showError("Authentication error: " + error.message);
+                } else {
+                    console.log("[DEBUG] Redirect callback success:", response);
+                    updateStatus("Authentication successful");
+                    loadPlannerPlans();
+                }
+            });
         } catch (error) {
             console.error("Failed to initialize MSAL:", error);
             showError("Failed to initialize MSAL: " + error.message);
@@ -182,6 +207,9 @@ Office.initialize = function (reason) {
                     // Handle specific multi-tenant errors
                     if (error.errorCode === "AADSTS700016") {
                         showError('This application is not available in your organization. Please contact your IT administrator.');
+                    } else if (error.errorCode === "AADSTS900971") {
+                        showError('Authentication error: No reply address provided. Please check Azure AD app registration.');
+                        console.error("Redirect URI error. Current URL:", window.location.href);
                     } else {
                         showError('Authentication error: ' + error.message);
                     }
