@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Microsoft Authentication</title>
+    <script src="https://alcdn.msauth.net/browser/2.13.1/js/msal-browser.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f3f2f1;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 4px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            font-size: 24px;
+            color: #0078d4;
+            margin-top: 0;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 4px;
+        }
+        .status.info {
+            background-color: #f0f8ff;
+            border-left: 4px solid #0078d4;
+        }
+        .status.success {
+            background-color: #dff6dd;
+            border-left: 4px solid #107c10;
+        }
+        .status.error {
+            background-color: #fde7e9;
+            border-left: 4px solid #d13438;
+        }
+        button {
+            background-color: #0078d4;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #106ebe;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Microsoft Authentication</h1>
+        <div id="statusMessage" class="status info">
+            Initializing authentication...
+        </div>
+        <div id="loginContainer">
+            <button id="loginButton">Sign in with Microsoft</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuration for MSAL
+        const msalConfig = {
+            auth: {
+                clientId: '60ca32af-6d83-4369-8a0a-dce7bb909d9d',
+                authority: 'https://login.microsoftonline.com/organizations',
+                redirectUri: window.location.href
+            },
+            cache: {
+                cacheLocation: 'sessionStorage',
+                storeAuthStateInCookie: false
+            }
+        };
+
+        // Request object with minimal permissions
+        const requestObj = {
+            scopes: [
+                'User.Read',
+                'Tasks.ReadWrite',
+                'Mail.Read'
+            ]
+        };
+
+        // Initialize MSAL
+        let msalInstance;
+        try {
+            msalInstance = new msal.PublicClientApplication(msalConfig);
+            updateStatus('Authentication initialized', 'info');
+            
+            // Check if we have a response from a redirect
+            msalInstance.handleRedirectPromise()
+                .then(handleResponse)
+                .catch(handleError);
+        } catch (error) {
+            handleError(error);
+        }
+
+        // Set up login button
+        document.getElementById('loginButton').addEventListener('click', login);
+
+        // Login function
+        function login() {
+            updateStatus('Starting authentication...', 'info');
+            
+            // Use loginPopup with a single prompt value
+            msalInstance.loginPopup({
+                ...requestObj,
+                prompt: 'consent'  // Use only one prompt value
+            })
+            .then(handleResponse)
+            .catch(handleError);
+        }
+
+        // Handle authentication response
+        function handleResponse(response) {
+            if (response) {
+                // We have a successful authentication response
+                updateStatus('Authentication successful', 'success');
+                
+                // Get user info
+                const account = msalInstance.getActiveAccount() || msalInstance.getAllAccounts()[0];
+                if (account) {
+                    // Acquire token silently
+                    msalInstance.acquireTokenSilent({
+                        ...requestObj,
+                        account: account
+                    })
+                    .then(tokenResponse => {
+                        // Send token back to parent window
+                        const message = {
+                            type: 'AUTH_SUCCESS',
+                            accessToken: tokenResponse.accessToken,
+                            userName: account.name,
+                            userEmail: account.username
+                        };
+                        
+                        // Send message to parent
+                        Office.context.ui.messageParent(JSON.stringify(message));
+                    })
+                    .catch(error => {
+                        handleError(error);
+                    });
+                } else {
+                    handleError(new Error('No account found after successful authentication'));
+                }
+            } else {
+                // Check if we already have an account
+                const accounts = msalInstance.getAllAccounts();
+                if (accounts.length > 0) {
+                    msalInstance.setActiveAccount(accounts[0]);
+                    
+                    // Acquire token silently
+                    msalInstance.acquireTokenSilent({
+                        ...requestObj,
+                        account: accounts[0]
+                    })
+                    .then(tokenResponse => {
+                        // Send token back to parent window
+                        const message = {
+                            type: 'AUTH_SUCCESS',
+                            accessToken: tokenResponse.accessToken,
+                            userName: accounts[0].name,
+                            userEmail: accounts[0].username
+                        };
+                        
+                        // Send message to parent
+                        Office.context.ui.messageParent(JSON.stringify(message));
+                    })
+                    .catch(error => {
+                        // If silent token acquisition fails, show login button
+                        document.getElementById('loginContainer').classList.remove('hidden');
+                    });
+                } else {
+                    // No account, show login button
+                    document.getElementById('loginContainer').classList.remove('hidden');
+                }
+            }
+        }
+
+        // Handle authentication error
+        function handleError(error) {
+            console.error('Authentication error:', error);
+            
+            let errorMessage = error.message || 'Unknown authentication error';
+            updateStatus('Error: ' + errorMessage, 'error');
+            
+            // Show login button
+            document.getElementById('loginContainer').classList.remove('hidden');
+            
+            // Send error to parent if it's a critical error
+            if (error.errorCode === 'user_cancelled' || 
+                error.message.includes('interaction_in_progress') ||
+                error.message.includes('popup_window_error')) {
+                // These are user-initiated or recoverable errors, don't report back
+                return;
+            }
+            
+            // Send error message to parent
+            try {
+                const message = {
+                    type: 'AUTH_ERROR',
+                    error: errorMessage
+                };
+                Office.context.ui.messageParent(JSON.stringify(message));
+            } catch (e) {
+                console.error('Error sending message to parent:', e);
+            }
+        }
+
+        // Update status message
+        function updateStatus(message, type) {
+            const statusElement = document.getElementById('statusMessage');
+            statusElement.textContent = message;
+            statusElement.className = 'status ' + type;
+        }
+    </script>
+    
+    <!-- Office.js reference -->
+    <script src="https://appsforoffice.microsoft.com/lib/1/hosted/office.js"></script>
+</body>
+</html>
