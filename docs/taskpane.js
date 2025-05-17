@@ -1,5 +1,5 @@
-// Complete taskpane.js with full functionality
-// This version combines working email loading with Planner integration
+// Multi-tenant taskpane.js with public use authentication
+// This version implements cross-tenant authentication for public use
 
 // Use Office.initialize instead of Office.onReady to ensure proper loading sequence
 Office.initialize = function (reason) {
@@ -10,11 +10,13 @@ Office.initialize = function (reason) {
     $(document).ready(function() {
         console.log("[DEBUG] Document ready event fired");
         
-        // MSAL configuration for authentication
+        // MSAL configuration for multi-tenant authentication
         const msalConfig = {
             auth: {
                 clientId: '60ca32af-6d83-4369-8a0a-dce7bb909d9d',
-                authority: 'https://login.microsoftonline.com/common',
+                // Use 'organizations' instead of 'common' for multi-tenant business apps
+                // This allows any work or school account but not personal Microsoft accounts
+                authority: 'https://login.microsoftonline.com/organizations',
                 redirectUri: 'https://ahmed-aboismael.github.io/Autoplanner/taskpane.html',
                 navigateToLoginRequestUrl: false
             },
@@ -127,9 +129,30 @@ Office.initialize = function (reason) {
             console.log("[DEBUG] User account:", account);
             loadPlannerPlans();
         } else {
-            updateStatus('Authenticating to access your Planner plans...');
-            // Auto-authenticate since we don't have an explicit auth button
-            authenticateWithPopup();
+            updateStatus('Please sign in to access your Planner plans');
+            // Add a sign-in button instead of auto-authenticating
+            addSignInButton();
+        }
+
+        // Add a sign-in button to the UI
+        function addSignInButton() {
+            const signInArea = document.createElement('div');
+            signInArea.style.margin = '20px 0';
+            signInArea.style.textAlign = 'center';
+            
+            const signInButton = document.createElement('button');
+            signInButton.textContent = 'Sign in with Microsoft';
+            signInButton.className = 'ms-Button ms-Button--primary';
+            signInButton.style.padding = '8px 16px';
+            signInButton.onclick = authenticateWithPopup;
+            
+            signInArea.appendChild(signInButton);
+            
+            // Find a good place to insert the button
+            const formElement = document.querySelector('form') || document.body;
+            formElement.insertBefore(signInArea, formElement.firstChild);
+            
+            console.log("[DEBUG] Sign-in button added");
         }
 
         // Authenticate using popup for Outlook desktop
@@ -141,15 +164,27 @@ Office.initialize = function (reason) {
                 return;
             }
             
+            // Add loginHint if available to improve the sign-in experience
+            const loginHint = Office.context.mailbox.userProfile.emailAddress;
+            const authParams = { ...requestObj };
+            if (loginHint) {
+                authParams.loginHint = loginHint;
+            }
+            
             console.log("[DEBUG] Starting popup authentication");
-            msalInstance.loginPopup(requestObj)
+            msalInstance.loginPopup(authParams)
                 .then(function(loginResponse) {
                     updateStatus('Authentication successful. Loading plans...');
                     console.log("[DEBUG] Login response:", loginResponse);
                     loadPlannerPlans();
                 })
                 .catch(function(error) {
-                    showError('Authentication error: ' + error.message);
+                    // Handle specific multi-tenant errors
+                    if (error.errorCode === "AADSTS700016") {
+                        showError('This application is not available in your organization. Please contact your IT administrator.');
+                    } else {
+                        showError('Authentication error: ' + error.message);
+                    }
                     console.error("Authentication error:", error);
                 });
         }
@@ -343,14 +378,13 @@ Office.initialize = function (reason) {
                             membersData.value.forEach(function(member) {
                                 const option = document.createElement('option');
                                 option.value = member.id;
-                                option.text = member.displayName;
+                                option.text = member.displayName || member.userPrincipalName || member.id;
                                 assigneeSelect.appendChild(option);
-                                console.log("[DEBUG] Added member:", member.displayName);
+                                console.log("[DEBUG] Added assignee:", option.text);
                             });
-                            updateStatus('Assignees loaded successfully: ' + membersData.value.length + ' members found');
+                            updateStatus('Assignees loaded successfully');
                         } else {
-                            updateStatus('No members found in this plan');
-                            console.log("[DEBUG] No members found in data:", membersData);
+                            updateStatus('No assignees found for this plan');
                         }
                     })
                     .catch(function(error) {
@@ -361,118 +395,108 @@ Office.initialize = function (reason) {
             }
         }
 
-        // Create Planner task
+        // Create a new Planner task
         function createPlannerTask() {
-            const plannerSelect = document.getElementById('planSelector');
-            const assigneeSelect = document.getElementById('assigneeSelector');
-            const titleInput = document.getElementById('taskTitle');
-            const descriptionTextarea = document.getElementById('taskDescription');
-            const dueDateInput = document.getElementById('dueDate');
+            const taskTitle = document.getElementById('taskTitle').value;
+            const taskDescription = document.getElementById('taskDescription').value;
+            const selectedPlanId = document.getElementById('planSelector').value;
+            const selectedAssigneeId = document.getElementById('assigneeSelector').value;
             
-            if (!plannerSelect || !assigneeSelect || !titleInput || !descriptionTextarea || !dueDateInput) {
-                showError('One or more form elements not found');
-                return;
-            }
-            
-            const planId = plannerSelect.value;
-            const assigneeId = assigneeSelect.value;
-            const title = titleInput.value;
-            const description = descriptionTextarea.value;
-            const dueDate = dueDateInput.value;
-            
-            console.log("[DEBUG] Creating task with:", { planId, assigneeId, title, dueDate });
-            
-            if (!planId) {
-                showError('Please select a plan');
-                return;
-            }
-            
-            if (!title) {
+            if (!taskTitle) {
                 showError('Please enter a task title');
+                return;
+            }
+            
+            if (!selectedPlanId) {
+                showError('Please select a plan');
                 return;
             }
             
             updateStatus('Creating task...');
             showElement('loadingIndicator');
             
-            // Prepare task data
-            const taskData = {
-                planId: planId,
-                title: title,
-                details: {
-                    description: description
-                }
-            };
-            
-            if (dueDate) {
-                const dueDateObj = new Date(dueDate);
-                taskData.dueDateTime = dueDateObj.toISOString();
-            }
-            
-            console.log("[DEBUG] Task data:", taskData);
-            
+            // First, get the buckets for the selected plan
             getAccessToken()
                 .then(function(accessToken) {
-                    // Create task in Planner
-                    return fetch('https://graph.microsoft.com/v1.0/planner/tasks', {
-                        method: 'POST',
+                    return fetch(`https://graph.microsoft.com/v1.0/planner/plans/${selectedPlanId}/buckets`, {
                         headers: {
-                            'Authorization': 'Bearer ' + accessToken,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(taskData)
+                            'Authorization': 'Bearer ' + accessToken
+                        }
                     });
                 })
                 .then(function(response) {
-                    console.log("[DEBUG] Create task API response status:", response.status);
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch buckets: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(function(bucketsData) {
+                    console.log("[DEBUG] Buckets data received:", bucketsData);
+                    
+                    // Use the first bucket or create a task without a bucket
+                    let bucketId = null;
+                    if (bucketsData.value && bucketsData.value.length > 0) {
+                        bucketId = bucketsData.value[0].id;
+                    }
+                    
+                    // Create the task
+                    const taskDetails = {
+                        planId: selectedPlanId,
+                        title: taskTitle,
+                        assignments: {}
+                    };
+                    
+                    // Add bucket if available
+                    if (bucketId) {
+                        taskDetails.bucketId = bucketId;
+                    }
+                    
+                    // Add description if available
+                    if (taskDescription) {
+                        taskDetails.details = {
+                            description: taskDescription
+                        };
+                    }
+                    
+                    // Add assignee if selected
+                    if (selectedAssigneeId) {
+                        taskDetails.assignments[selectedAssigneeId] = {
+                            '@odata.type': '#microsoft.graph.plannerAssignment',
+                            'orderHint': ' !'
+                        };
+                    }
+                    
+                    return getAccessToken().then(accessToken => {
+                        return fetch('https://graph.microsoft.com/v1.0/planner/tasks', {
+                            method: 'POST',
+                            headers: {
+                                'Authorization': 'Bearer ' + accessToken,
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(taskDetails)
+                        });
+                    });
+                })
+                .then(function(response) {
                     if (!response.ok) {
                         return response.text().then(text => {
-                            console.log("[DEBUG] Error response body:", text);
                             throw new Error('Failed to create task: ' + response.status + ' - ' + text);
                         });
                     }
                     return response.json();
                 })
                 .then(function(taskData) {
-                    console.log("[DEBUG] Task created successfully:", taskData);
-                    
-                    // If assignee is selected, assign the task
-                    if (assigneeId) {
-                        return getAccessToken().then(accessToken => {
-                            const assignmentData = {
-                                assignments: {
-                                    [assigneeId]: {
-                                        "@odata.type": "#microsoft.graph.plannerAssignment",
-                                        "orderHint": " !"
-                                    }
-                                }
-                            };
-                            
-                            return fetch(`https://graph.microsoft.com/v1.0/planner/tasks/${taskData.id}/assignments`, {
-                                method: 'PATCH',
-                                headers: {
-                                    'Authorization': 'Bearer ' + accessToken,
-                                    'Content-Type': 'application/json',
-                                    'If-Match': taskData['@odata.etag']
-                                },
-                                body: JSON.stringify(assignmentData)
-                            }).then(() => taskData);
-                        });
-                    }
-                    
-                    return taskData;
-                })
-                .then(function(data) {
+                    console.log("[DEBUG] Task created:", taskData);
                     hideElement('loadingIndicator');
                     updateStatus('Task created successfully!');
                     
-                    // Clear form
-                    titleInput.value = '';
-                    descriptionTextarea.value = '';
-                    dueDateInput.value = '';
+                    // Clear form or reset values
+                    document.getElementById('taskTitle').value = '';
+                    document.getElementById('taskDescription').value = '';
+                    document.getElementById('assigneeSelector').innerHTML = '';
                     
                     // Show success message
-                    showSuccess('Task created successfully in Planner!');
+                    showSuccess('Task "' + taskTitle + '" created successfully in Planner!');
                 })
                 .catch(function(error) {
                     hideElement('loadingIndicator');
@@ -481,73 +505,45 @@ Office.initialize = function (reason) {
                 });
         }
 
-        // Helper function to show success message
-        function showSuccess(message) {
-            const statusMsg = document.getElementById('statusMessage');
-            if (statusMsg) {
-                statusMsg.textContent = message;
-                statusMsg.style.color = '#4CAF50';
-                statusMsg.style.fontWeight = 'bold';
-                
-                // Reset after 3 seconds
-                setTimeout(function() {
-                    statusMsg.textContent = '';
-                    statusMsg.style.color = '';
-                    statusMsg.style.fontWeight = '';
-                }, 3000);
+        // Helper functions for UI updates
+        function updateStatus(message) {
+            console.log("[STATUS] " + message);
+            const statusElement = document.getElementById('statusMessage');
+            if (statusElement) {
+                statusElement.textContent = message;
+                statusElement.style.color = '#333';
             }
         }
-
-        // Show element by ID
+        
+        function showError(message) {
+            console.error("[ERROR] " + message);
+            const statusElement = document.getElementById('statusMessage');
+            if (statusElement) {
+                statusElement.textContent = message;
+                statusElement.style.color = 'red';
+            }
+        }
+        
+        function showSuccess(message) {
+            console.log("[SUCCESS] " + message);
+            const statusElement = document.getElementById('statusMessage');
+            if (statusElement) {
+                statusElement.textContent = message;
+                statusElement.style.color = 'green';
+            }
+        }
+        
         function showElement(id) {
             const element = document.getElementById(id);
             if (element) {
                 element.style.display = 'block';
-                console.log(`[DEBUG] Element ${id} shown`);
-            } else {
-                console.log(`[DEBUG] Cannot show element ${id} - not found`);
             }
         }
-
-        // Hide element by ID
+        
         function hideElement(id) {
             const element = document.getElementById(id);
             if (element) {
                 element.style.display = 'none';
-                console.log(`[DEBUG] Element ${id} hidden`);
-            } else {
-                console.log(`[DEBUG] Cannot hide element ${id} - not found`);
-            }
-        }
-
-        // Helper function to update status
-        function updateStatus(message) {
-            const statusElement = document.getElementById('statusMessage');
-            if (statusElement) {
-                statusElement.textContent = message;
-                console.log("[DEBUG] Status updated:", message);
-            } else {
-                console.log("[DEBUG] Status element not available. Message:", message);
-            }
-        }
-
-        // Helper function to show error
-        function showError(message) {
-            console.error("ERROR:", message);
-            updateStatus('Error: ' + message);
-            
-            const statusMsg = document.getElementById('statusMessage');
-            if (statusMsg) {
-                statusMsg.textContent = 'Error: ' + message;
-                statusMsg.style.color = '#F44336';
-                statusMsg.style.fontWeight = 'bold';
-                
-                // Reset after 5 seconds
-                setTimeout(function() {
-                    statusMsg.textContent = '';
-                    statusMsg.style.color = '';
-                    statusMsg.style.fontWeight = '';
-                }, 5000);
             }
         }
     });
