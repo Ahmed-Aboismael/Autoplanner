@@ -1,101 +1,142 @@
-// Enhanced debug version of taskpane.js with additional logging
+// Enhanced version of taskpane.js with improved error reporting
 
 // Office.initialize function that runs when the add-in is loaded
 Office.initialize = function (reason) {
-    console.log("Office.initialize started with reason:", reason);
-    
-    // Check if jQuery is available
-    if (typeof $ === 'undefined') {
-        console.error("jQuery ($) is not defined! Make sure jQuery is loaded before taskpane.js");
-        alert("Error: jQuery not loaded. Please check the console for details.");
-        return;
-    }
-    
-    console.log("jQuery is available, continuing initialization...");
-    
-    // Ensure the DOM is loaded before we try to manipulate it
-    $(document).ready(function () {
-        console.log("DOM ready, setting up event handlers...");
+    try {
+        console.log("Office.initialize started with reason:", reason);
         
-        // Log initialization
-        console.log("Outlook Planner Add-in initialized.");
+        // Check if jQuery is available
+        if (typeof $ === 'undefined') {
+            displayError("jQuery ($) is not defined! Make sure jQuery is loaded before taskpane.js");
+            return;
+        }
         
-        // Set up event handlers
-        $("#createTaskButton").on("click", function() {
-            console.log("Create Task button clicked");
-            createTask();
-        });
-        
-        $("#planSelector").on("change", function() {
-            console.log("Plan selection changed to:", $(this).val());
-            handlePlanSelectionChange();
-        });
-        
-        // Attempt to get email details
-        console.log("Attempting to get email details...");
-        getEmailDetails();
-        
-        // Attempt to get a token and then fetch plans
-        console.log("Starting authentication process...");
-        ensureGraphToken()
-            .then(token => {
-                console.log("Token obtained:", token ? "Yes (token available)" : "No (token is null or empty)");
-                if (token) {
-                    console.log("Fetching Planner plans...");
-                    fetchPlannerPlans();
-                } else {
-                    console.warn("No token available, cannot fetch plans");
-                    updateStatus("Authentication failed. Cannot fetch plans.", true);
+        // Ensure the DOM is loaded before we try to manipulate it
+        $(document).ready(function () {
+            try {
+                console.log("DOM ready, setting up event handlers...");
+                
+                // Create error display area if it doesn't exist
+                if ($("#errorDisplay").length === 0) {
+                    $("body").prepend('<div id="errorDisplay" style="display:none; color:red; background-color:#ffeeee; padding:10px; margin-bottom:10px; border:1px solid red;"></div>');
                 }
-            })
-            .catch(err => {
-                console.error("Initial token fetch or plan loading failed: ", err);
-                updateStatus("Error during authentication: " + (err.message || err), true);
-            });
-    });
+                
+                // Log initialization
+                console.log("Outlook Planner Add-in initialized.");
+                
+                // Set up event handlers
+                $("#createTaskButton").on("click", function() {
+                    console.log("Create Task button clicked");
+                    createTask();
+                });
+                
+                $("#planSelector").on("change", function() {
+                    console.log("Plan selection changed to:", $(this).val());
+                    handlePlanSelectionChange();
+                });
+                
+                // Attempt to get email details
+                console.log("Attempting to get email details...");
+                getEmailDetails();
+                
+                // Attempt to get a token and then fetch plans
+                console.log("Starting authentication process...");
+                ensureGraphToken()
+                    .then(token => {
+                        console.log("Token obtained:", token ? "Yes (token available)" : "No (token is null or empty)");
+                        if (token) {
+                            console.log("Fetching Planner plans...");
+                            fetchPlannerPlans();
+                        } else {
+                            console.warn("No token available, cannot fetch plans");
+                            updateStatus("Authentication failed. Cannot fetch plans.", true);
+                            displayError("Authentication failed. No token available to access Microsoft Graph API.");
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Initial token fetch or plan loading failed: ", err);
+                        updateStatus("Error during authentication: " + (err.message || err), true);
+                        displayError("Authentication error: " + (err.message || err));
+                    });
+            } catch (error) {
+                console.error("Error in document ready handler:", error);
+                displayError("Initialization error: " + (error.message || error));
+            }
+        });
+    } catch (error) {
+        console.error("Error in Office.initialize:", error);
+        // Can't use jQuery here as it might not be loaded
+        alert("Critical initialization error: " + (error.message || error));
+    }
 };
+
+// Function to display errors prominently in the UI
+function displayError(message) {
+    console.error("ERROR:", message);
+    
+    try {
+        if ($("#errorDisplay").length > 0) {
+            $("#errorDisplay").html("<strong>Error:</strong> " + message)
+                .show();
+        } else {
+            // Fallback if jQuery or the error display div isn't available
+            updateStatus("ERROR: " + message, true);
+        }
+    } catch (e) {
+        // Last resort if even the above fails
+        console.error("Failed to display error:", e);
+        alert("Error: " + message);
+    }
+}
 
 // Function to get details from the currently selected email
 function getEmailDetails() {
     console.log("getEmailDetails() called");
     
-    if (!Office || !Office.context || !Office.context.mailbox) {
-        console.error("Office.context.mailbox is not available!");
-        updateStatus("Error: Office mailbox context not available", true);
-        return;
-    }
-    
-    if (Office.context.mailbox.item) {
-        const item = Office.context.mailbox.item;
-        console.log("Email item found, attempting to get subject...");
+    try {
+        if (!Office || !Office.context || !Office.context.mailbox) {
+            displayError("Office.context.mailbox is not available! This add-in must be run in Outlook.");
+            return;
+        }
         
-        // Get subject
-        item.subject.getAsync(function (asyncResult) {
-            console.log("Subject getAsync result:", asyncResult);
-            if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-                console.log("Successfully got email subject:", asyncResult.value);
-                $("#taskTitle").val(asyncResult.value);
-            } else {
-                console.error("Error getting email subject: ", asyncResult.error);
-                updateStatus("Error getting email subject: " + asyncResult.error.message, true);
-            }
-        });
-        
-        // Get body (plain text)
-        console.log("Attempting to get email body...");
-        item.body.getAsync(Office.CoercionType.Text, function (asyncResult) {
-            console.log("Body getAsync result:", asyncResult);
-            if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
-                console.log("Successfully got email body (length: " + asyncResult.value.length + " chars)");
-                $("#taskDescription").val(asyncResult.value);
-            } else {
-                console.error("Error getting email body: ", asyncResult.error);
-                updateStatus("Error getting email body: " + asyncResult.error.message, true);
-            }
-        });
-    } else {
-        console.warn("No email item selected or available.");
-        updateStatus("No email item selected or available.", true);
+        if (Office.context.mailbox.item) {
+            const item = Office.context.mailbox.item;
+            console.log("Email item found, attempting to get subject...");
+            
+            // Get subject
+            item.subject.getAsync(function (asyncResult) {
+                console.log("Subject getAsync result:", asyncResult);
+                if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+                    console.log("Successfully got email subject:", asyncResult.value);
+                    $("#taskTitle").val(asyncResult.value);
+                } else {
+                    console.error("Error getting email subject: ", asyncResult.error);
+                    updateStatus("Error getting email subject: " + asyncResult.error.message, true);
+                    displayError("Failed to get email subject: " + asyncResult.error.message);
+                }
+            });
+            
+            // Get body (plain text)
+            console.log("Attempting to get email body...");
+            item.body.getAsync(Office.CoercionType.Text, function (asyncResult) {
+                console.log("Body getAsync result:", asyncResult);
+                if (asyncResult.status === Office.AsyncResultStatus.Succeeded) {
+                    console.log("Successfully got email body (length: " + asyncResult.value.length + " chars)");
+                    $("#taskDescription").val(asyncResult.value);
+                } else {
+                    console.error("Error getting email body: ", asyncResult.error);
+                    updateStatus("Error getting email body: " + asyncResult.error.message, true);
+                    displayError("Failed to get email body: " + asyncResult.error.message);
+                }
+            });
+        } else {
+            console.warn("No email item selected or available.");
+            updateStatus("No email item selected or available.", true);
+            displayError("No email item is selected or available. Please select an email first.");
+        }
+    } catch (error) {
+        console.error("Error in getEmailDetails:", error);
+        displayError("Failed to get email details: " + (error.message || error));
     }
 }
 
@@ -112,21 +153,21 @@ let planToGroupMap = {};
 async function ensureGraphToken() {
     console.log("ensureGraphToken() called");
     
-    if (graphAccessToken) {
-        console.log("Using existing Graph token.");
-        return graphAccessToken;
-    }
-    
-    console.log("No existing token, attempting to get access token via Office SSO...");
-    
-    // Check if Office.auth is available
-    if (!Office.auth) {
-        console.error("Office.auth is not available! This might be due to missing permissions or incorrect manifest configuration.");
-        updateStatus("Authentication API not available. Check add-in permissions.", true);
-        return null;
-    }
-    
     try {
+        if (graphAccessToken) {
+            console.log("Using existing Graph token.");
+            return graphAccessToken;
+        }
+        
+        console.log("No existing token, attempting to get access token via Office SSO...");
+        
+        // Check if Office.auth is available
+        if (!Office.auth) {
+            console.error("Office.auth is not available! This might be due to missing permissions or incorrect manifest configuration.");
+            displayError("Authentication API not available. Check add-in permissions in manifest.xml and Azure AD configuration.");
+            return null;
+        }
+        
         console.log("Calling Office.auth.getAccessToken...");
         const ssoToken = await Office.auth.getAccessToken({
             allowSignInPrompt: true,
@@ -146,6 +187,7 @@ async function ensureGraphToken() {
             handleSSOError(error);
         } else {
             updateStatus(`Error getting SSO token: ${error.message || error}`, true);
+            displayError(`Authentication error: ${error.message || error}`);
         }
         
         throw error; // Re-throw to indicate failure
@@ -162,29 +204,36 @@ function handleSSOError(error) {
         case 13001:
             console.log("The user is not logged in, or the user cancelled without providing consent.");
             updateStatus("Please sign in to Microsoft 365 and grant permissions to this add-in.", true);
+            displayError("Authentication error: You need to sign in to Microsoft 365 and grant permissions to this add-in.");
             break;
         case 13002:
             console.log("The user's identity or access token is invalid.");
             updateStatus("Authentication error: Invalid user identity or access token.", true);
+            displayError("Authentication error: Your identity or access token is invalid.");
             break;
         case 13003:
             console.log("A resource that the application requires is unavailable.");
             updateStatus("Required resource is unavailable. Check add-in configuration.", true);
+            displayError("Authentication error: A required resource is unavailable. Check add-in configuration.");
             break;
         case 13005:
             console.log("The add-in requested a token for a resource that hasn't been configured.");
             updateStatus("Authentication error: Resource not configured in Azure AD.", true);
+            displayError("Authentication error: The resource hasn't been configured in Azure AD. Check your app registration.");
             break;
         case 13010:
             console.log("User interaction is required to get the access token.");
             updateStatus("Please complete the sign-in process when prompted.", true);
+            displayError("Authentication requires your interaction. Please complete the sign-in process when prompted.");
             break;
         case 13012:
             console.log("The user or administrator has not consented to use the application.");
             updateStatus("Please grant consent to this application when prompted.", true);
+            displayError("You need to grant consent to this application. Please complete the permission request when prompted.");
             break;
         default:
             updateStatus(`SSO Error: ${error.message || error}`, true);
+            displayError(`Authentication error (${error.code}): ${error.message || error}`);
             break;
     }
 }
@@ -202,6 +251,7 @@ async function fetchPlannerPlans() {
         if (!token) {
             console.error("Authentication token not available. Cannot fetch plans.");
             updateStatus("Authentication token not available. Cannot fetch plans.", true);
+            displayError("Failed to get authentication token. Cannot access your Planner plans.");
             showLoading(false);
             return;
         }
@@ -226,8 +276,10 @@ async function fetchPlannerPlans() {
             let errorObj;
             try {
                 errorObj = JSON.parse(errorText);
+                displayError(`Graph API Error (${response.status}): ${errorObj.error ? errorObj.error.message : 'Failed to fetch plans'}`);
             } catch (e) {
                 errorObj = { error: { message: response.statusText } };
+                displayError(`Graph API Error (${response.status}): ${response.statusText}`);
             }
             
             console.error("Error fetching plans: ", errorObj);
@@ -264,10 +316,12 @@ async function fetchPlannerPlans() {
             console.warn("No plans found or accessible.");
             planSelector.append($("<option></option>").attr("value", "").text("No plans found or accessible."));
             updateStatus("No Planner plans found or you may not have access to any.", false);
+            displayError("No Planner plans were found or you don't have access to any plans. Make sure you have the necessary permissions.");
         }
     } catch (error) {
         console.error("Failed to fetch Planner plans: ", error);
         updateStatus(`Error loading plans: ${error.message}`, true);
+        displayError(`Failed to load Planner plans: ${error.message}`);
         
         const planSelector = $("#planSelector");
         planSelector.empty().append($("<option></option>").attr("value", "").text("Error loading plans"));
@@ -287,6 +341,7 @@ async function fetchPlanMembers(groupId) {
     if (!groupId) {
         console.error("Cannot load members: Group ID not found for this plan.");
         updateStatus("Cannot load members: Group ID not found for this plan.", true);
+        displayError("Cannot load members: Group ID not found for this plan.");
         assigneeSelector.empty().append($("<option></option>").attr("value", "").text("Error: Group ID missing"));
         showLoading(false);
         return;
@@ -299,6 +354,7 @@ async function fetchPlanMembers(groupId) {
         if (!token) {
             console.error("Authentication token not available. Cannot fetch members.");
             updateStatus("Authentication token not available. Cannot fetch members.", true);
+            displayError("Failed to get authentication token. Cannot load plan members.");
             showLoading(false);
             return;
         }
@@ -323,8 +379,10 @@ async function fetchPlanMembers(groupId) {
             let errorObj;
             try {
                 errorObj = JSON.parse(errorText);
+                displayError(`Graph API Error (${response.status}): ${errorObj.error ? errorObj.error.message : 'Failed to fetch members'}`);
             } catch (e) {
                 errorObj = { error: { message: response.statusText } };
+                displayError(`Graph API Error (${response.status}): ${response.statusText}`);
             }
             
             console.error("Error fetching group members: ", errorObj);
@@ -353,10 +411,12 @@ async function fetchPlanMembers(groupId) {
             console.warn("No members found in this plan's group.");
             assigneeSelector.append($("<option></option>").attr("value", "").text("No members found in this plan."));
             updateStatus("No members found in this plan's group.", false);
+            displayError("No members were found in this plan's group.");
         }
     } catch (error) {
         console.error("Failed to fetch plan members: ", error);
         updateStatus(`Error loading members: ${error.message}`, true);
+        displayError(`Failed to load plan members: ${error.message}`);
         assigneeSelector.empty().append($("<option></option>").attr("value", "").text("Error loading members"));
     } finally {
         showLoading(false);
@@ -379,6 +439,7 @@ function handlePlanSelectionChange() {
         } else {
             console.warn("No Group ID found mapped for plan ID: " + selectedPlanId);
             updateStatus("Could not determine group for this plan to load members.", true);
+            displayError("Could not determine the group for this plan to load members.");
             assigneeSelector.empty().append($("<option></option>").attr("value", "").text("Cannot load members for this plan"));
         }
     } else {
@@ -390,44 +451,47 @@ function handlePlanSelectionChange() {
 async function createTask() {
     console.log("createTask() called");
     
-    // Get form values
-    const planId = $("#planSelector").val();
-    const assigneeId = $("#assigneeSelector").val();
-    const taskTitle = $("#taskTitle").val();
-    const dueDate = $("#dueDate").val();
-    const description = $("#taskDescription").val();
-    
-    console.log("Form values:", {
-        planId,
-        assigneeId,
-        taskTitle,
-        dueDate,
-        description: description ? description.substring(0, 50) + "..." : "(empty)"
-    });
-    
-    // Validate required fields
-    if (!planId) {
-        console.error("No plan selected");
-        updateStatus("Please select a plan.", true);
-        return;
-    }
-    
-    if (!taskTitle) {
-        console.error("No task title provided");
-        updateStatus("Please provide a task title.", true);
-        return;
-    }
-    
-    showLoading(true);
-    updateStatus("Creating task...", false);
-    
     try {
+        // Get form values
+        const planId = $("#planSelector").val();
+        const assigneeId = $("#assigneeSelector").val();
+        const taskTitle = $("#taskTitle").val();
+        const dueDate = $("#dueDate").val();
+        const description = $("#taskDescription").val();
+        
+        console.log("Form values:", {
+            planId,
+            assigneeId,
+            taskTitle,
+            dueDate,
+            description: description ? description.substring(0, 50) + "..." : "(empty)"
+        });
+        
+        // Validate required fields
+        if (!planId) {
+            console.error("No plan selected");
+            updateStatus("Please select a plan.", true);
+            displayError("Please select a plan before creating a task.");
+            return;
+        }
+        
+        if (!taskTitle) {
+            console.error("No task title provided");
+            updateStatus("Please provide a task title.", true);
+            displayError("Please provide a task title.");
+            return;
+        }
+        
+        showLoading(true);
+        updateStatus("Creating task...", false);
+        
         console.log("Ensuring Graph token is available...");
         const token = await ensureGraphToken();
         
         if (!token) {
             console.error("Authentication token not available. Cannot create task.");
             updateStatus("Authentication token not available. Cannot create task.", true);
+            displayError("Failed to get authentication token. Cannot create task.");
             showLoading(false);
             return;
         }
@@ -473,8 +537,10 @@ async function createTask() {
             let errorObj;
             try {
                 errorObj = JSON.parse(errorText);
+                displayError(`Failed to create task (${createResponse.status}): ${errorObj.error ? errorObj.error.message : 'Unknown error'}`);
             } catch (e) {
                 errorObj = { error: { message: createResponse.statusText } };
+                displayError(`Failed to create task (${createResponse.status}): ${createResponse.statusText}`);
             }
             
             console.error("Error creating task: ", errorObj);
@@ -532,6 +598,7 @@ async function createTask() {
                 console.error("Error assigning task:", assignmentResponse.statusText);
                 // We don't throw here because the task was created successfully
                 updateStatus("Task created but assignment failed.", true);
+                displayError("Task was created successfully, but assigning it to the selected user failed.");
             } else {
                 console.log("Task assigned successfully");
             }
@@ -539,6 +606,7 @@ async function createTask() {
         
         // Success!
         updateStatus("Task created successfully!", false);
+        $("#errorDisplay").hide(); // Hide any previous errors
         
         // Reset form
         $("#taskTitle").val("");
@@ -548,6 +616,7 @@ async function createTask() {
     } catch (error) {
         console.error("Failed to create task: ", error);
         updateStatus(`Error creating task: ${error.message}`, true);
+        displayError(`Failed to create task: ${error.message}`);
     } finally {
         showLoading(false);
     }
@@ -580,9 +649,9 @@ function updateStatus(message, isError) {
 window.onerror = function(message, source, lineno, colno, error) {
     console.error("Unhandled error:", message, "at", source, ":", lineno, ":", colno);
     console.error("Error object:", error);
-    updateStatus("An unexpected error occurred. See console for details.", true);
+    displayError(`Unhandled error: ${message} (at line ${lineno})`);
     return true; // Prevents the default browser error handling
 };
 
 // Log that the script has loaded
-console.log("Debug version of taskpane.js loaded successfully");
+console.log("Enhanced error reporting version of taskpane.js loaded successfully");
