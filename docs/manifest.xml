@@ -188,6 +188,8 @@
           <bt:String id="TaskpaneButton.Tooltip" DefaultValue="Create a task in Microsoft Planner from this email"/>
         </bt:LongStrings>
       </Resources>
+      <!--  Nested VersionOverridesV1_1 for WebApplicationInfo  -->
+        <VersionOverrides xmlns="http://schemas.microsoft.com/office/mailappversionoverrides/1.1" xsi:type="VersionOverridesV1_1">
       <WebApplicationInfo>
         <Id>60ca32af-6d83-4369-8a0a-dce7bb909d9d</Id>
         <Resource>api://Ahmed-Aboismael.github.io/Autoplanner/60ca32af-6d83-4369-8a0a-dce7bb909d9d</Resource>
